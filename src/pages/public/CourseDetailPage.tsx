@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui";
 import ALL_COURSES from "@/mocks/courses";
@@ -12,7 +12,7 @@ export default function CourseDetailPage() {
   const { t } = useTranslation();
   const params = useParams();
   const id = params.id || "";
-
+  const navigate = useNavigate();
   const course = ALL_COURSES.find((c) => c.id === id);
 
   // simple mock: generate sections if none
@@ -67,29 +67,41 @@ export default function CourseDetailPage() {
               </div>
               <div className="mt-4">{course.description}</div>
             </div>
-            <div className="col-span-4 bg-white rounded-lg">
-              <div className="sticky top-4 p-4">
-                <div className="">
-                  <img
-                    src={course.thumbnail}
-                    alt={course.title}
-                    className="rounded-lg"
-                  />
-                  <div className="text-black mt-4">
-                    <div className="text-lg font-semibold">{course.title}</div>
-                    <div className="mt-2 text-sm">
-                      <div>
-                        {course.rating} ⭐ • {course.totalRatings} ratings
+            <div className="relative top-0 col-span-4">
+              <div className="sticky top-20 col-span-4">
+                <div className="absolute p-4 bg-white border-2 rounded-lg">
+                  <div className="">
+                    <img
+                      src={course.thumbnail}
+                      alt={course.title}
+                      className="rounded-lg aspect-video object-cover"
+                    />
+                    <div className="text-black mt-4">
+                      <div className="text-lg font-semibold">
+                        {course.title}
                       </div>
-                      <div>{course.students.toLocaleString()} students</div>
-                    </div>
-                    <div className="mt-4">
-                      <div className="text-2xl font-bold">
-                        {(course.price * 23000).toLocaleString("vi-VN")} ₫
+                      <div className="mt-2 text-sm">
+                        <div>
+                          {course.rating} ⭐ • {course.totalRatings} ratings
+                        </div>
+                        <div>{course.students.toLocaleString()} students</div>
                       </div>
-                      <button className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">
-                        {t("cta.enroll")}
-                      </button>
+                      <div className="mt-4">
+                        <div className="text-2xl font-bold">
+                          {(course.price * 23000).toLocaleString("vi-VN")} ₫
+                        </div>
+                        <button className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">
+                          {t("cta.enroll")}
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigate("learn");
+                          }}
+                          className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
+                        >
+                          Learning
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

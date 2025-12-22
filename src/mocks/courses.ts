@@ -14,7 +14,8 @@ export const ALL_COURSES: Course[] = [
     rating: 4.8,
     totalRatings: 2500,
     students: 50000,
-    thumbnail: "https://placehold.co/600x400?text=JavaScript",
+    thumbnail:
+      "https://images.pexels.com/photos/34638798/pexels-photo-34638798.jpeg",
     duration: 40,
     level: "Beginner",
     tags: ["web", "programming", "javascript"],
