@@ -9,6 +9,7 @@ import {
   PurchasesPage,
   CertificatesPage,
   CourseDetailPage,
+  VideoLearningPage,
 } from "@/pages";
 import MainLayout from "./layouts/MainLayout";
 
@@ -20,6 +21,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:id" element={<CourseDetailPage />} />
+          <Route path="/courses/:id/learn" element={<VideoLearningPage />} />
         </Route>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
