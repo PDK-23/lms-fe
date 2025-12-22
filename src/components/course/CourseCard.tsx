@@ -31,8 +31,8 @@ export function CourseCard({
       <Card
         className="overflow-hidden cursor-pointer hover:shadow-elevation transition-all duration-200"
         onClick={() => {
-          console.log("Navigate to course detail page");
-          // navigate(`/courses/${course.id}`);
+          // console.log("Navigate to course detail page");
+          navigate(`/courses/${course.id}`);
         }}
       >
         <div className="relative">

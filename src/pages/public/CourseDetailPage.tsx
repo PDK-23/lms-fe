@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui";
 import ALL_COURSES from "@/mocks/courses";
@@ -12,7 +12,7 @@ export default function CourseDetailPage() {
   const { t } = useTranslation();
   const params = useParams();
   const id = params.id || "";
-
+  const navigate = useNavigate();
   const course = ALL_COURSES.find((c) => c.id === id);
 
   // simple mock: generate sections if none
@@ -92,6 +92,14 @@ export default function CourseDetailPage() {
                         </div>
                         <button className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">
                           {t("cta.enroll")}
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigate("learn");
+                          }}
+                          className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
+                        >
+                          Learning
                         </button>
                       </div>
                     </div>

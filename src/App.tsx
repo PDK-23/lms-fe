@@ -10,7 +10,13 @@ import {
   CertificatesPage,
   CourseDetailPage,
   VideoLearningPage,
+  AdminDashboard,
+  AdminCourses,
+  AdminUsers,
+  AdminReports,
+  AdminCourseNew,
 } from "@/pages";
+import AdminLayout from "@/layouts/AdminLayout";
 import MainLayout from "./layouts/MainLayout";
 
 function App() {
@@ -28,6 +34,13 @@ function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/purchases" element={<PurchasesPage />} />
         <Route path="/certificates" element={<CertificatesPage />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="courses" element={<AdminCourses />} />
+          <Route path="courses/new" element={<AdminCourseNew />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="reports" element={<AdminReports />} />
+        </Route>
       </Routes>
     </Router>
   );

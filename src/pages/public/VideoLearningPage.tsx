@@ -169,7 +169,7 @@ export default function VideoLearningPage() {
           </div>
 
           {/* Center - Video Player & Info */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-2 space-y-6">
             <VideoPlayer
               videoUrl={currentLesson?.videoUrl}
               title={currentLesson?.title || "Select a lesson"}
