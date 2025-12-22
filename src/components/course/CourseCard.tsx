@@ -6,6 +6,7 @@ import {
   formatRating,
   calculateDiscountPercentage,
 } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface CourseCardProps {
   course: Course;
@@ -23,10 +24,17 @@ export function CourseCard({
   const discountPercentage = showDiscount
     ? calculateDiscountPercentage(course.price, course.originalPrice!)
     : 0;
+  const navigate = useNavigate();
 
   if (variant === "compact") {
     return (
-      <Card className="overflow-hidden cursor-pointer hover:shadow-elevation transition-all duration-200">
+      <Card
+        className="overflow-hidden cursor-pointer hover:shadow-elevation transition-all duration-200"
+        onClick={() => {
+          // console.log("Navigate to course detail page");
+          navigate(`/courses/${course.id}`);
+        }}
+      >
         <div className="relative">
           <div className="w-full aspect-video bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
             <img
@@ -91,7 +99,12 @@ export function CourseCard({
   }
 
   return (
-    <Card className="overflow-hidden cursor-pointer hover:shadow-elevation transition-all duration-200">
+    <Card
+      className="overflow-hidden cursor-pointer hover:shadow-elevation transition-all duration-200"
+      onClick={() => {
+        navigate(`/courses/${course.id}`);
+      }}
+    >
       <div className="relative">
         <div className="w-full aspect-video bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
           <img
