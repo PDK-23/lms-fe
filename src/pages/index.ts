@@ -12,3 +12,5 @@ export { default as AdminCourses } from "./admin/AdminCourses";
 export { default as AdminUsers } from "./admin/AdminUsers";
 export { default as AdminReports } from "./admin/AdminReports";
 export { default as AdminCourseNew } from "./admin/AdminCourseNew";
+export { default as QuizPage } from "./public/QuizPage";
+export { default as CodePracticePage } from "./public/CodePracticePage";

@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Header, Footer } from "@/components/common";
 import {
   HomePage,
   CoursesPage,
@@ -15,6 +14,8 @@ import {
   AdminUsers,
   AdminReports,
   AdminCourseNew,
+  QuizPage,
+  CodePracticePage,
 } from "@/pages";
 import AdminLayout from "@/layouts/AdminLayout";
 import MainLayout from "./layouts/MainLayout";
@@ -27,7 +28,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:id" element={<CourseDetailPage />} />
-          <Route path="/courses/:id/learn" element={<VideoLearningPage />} />
+          <Route path="/courses/:id/learn/*" element={<VideoLearningPage />} />
         </Route>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
@@ -40,7 +41,15 @@ function App() {
           <Route path="courses/new" element={<AdminCourseNew />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="reports" element={<AdminReports />} />
-        </Route>
+        </Route>{" "}
+        <Route
+          path="/courses/:id/learn/lesson/:lessonId/quiz"
+          element={<QuizPage />}
+        />
+        <Route
+          path="/courses/:id/learn/lesson/:lessonId/leetcode/:slug"
+          element={<CodePracticePage />}
+        />{" "}
       </Routes>
     </Router>
   );

@@ -44,6 +44,8 @@ export interface Lesson {
   videoUrl?: string;
   materials?: string[];
   isCompleted?: boolean;
+  quizAvailable?: boolean; // whether this lesson has a quiz
+  practiceId?: string; // optional practice slug/id
 }
 
 export interface Section {
