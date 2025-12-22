@@ -153,11 +153,11 @@ export function VideoLessonPlayer({
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(
-                              `/courses/${courseId}/learn/lesson/${lesson.id}/leetcode/${lesson.practiceId}`
+                              `/courses/${courseId}/learn/lesson/${lesson.id}/practice/${lesson.practiceId}`
                             );
                           }}
                           className="px-2 py-1 text-xs rounded bg-slate-50 text-slate-700 flex items-center gap-1"
-                          title="Open LeetCode"
+                          title="Open practice"
                         >
                           <Code className="w-3 h-3" /> Practice
                         </button>

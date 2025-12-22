@@ -20,6 +20,53 @@ export const ALL_COURSES: Course[] = [
     level: "Beginner",
     tags: ["web", "programming", "javascript"],
     isBestseller: true,
+    // Sample sections with lessons for admin CRUD demo
+    sections: [
+      {
+        id: "1-sec-1",
+        title: "Getting Started",
+        lessons: [
+          {
+            id: "1-sec-1-1",
+            title: "Introduction",
+            duration: 8,
+            videoUrl: "",
+            materials: [],
+            quizAvailable: false,
+          },
+          {
+            id: "1-sec-1-2",
+            title: "Setup & Tooling",
+            duration: 12,
+            videoUrl: "",
+            materials: [],
+            quizAvailable: true,
+          },
+        ],
+      },
+      {
+        id: "1-sec-2",
+        title: "Core Concepts",
+        lessons: [
+          {
+            id: "1-sec-2-1",
+            title: "Variables & Types",
+            duration: 15,
+            videoUrl: "",
+            materials: [],
+            quizAvailable: false,
+          },
+          {
+            id: "1-sec-2-2",
+            title: "Functions & Scope",
+            duration: 18,
+            videoUrl: "",
+            materials: [],
+            quizAvailable: true,
+          },
+        ],
+      },
+    ],
   },
   {
     id: "2",

@@ -6,13 +6,13 @@ export default function CodePracticePage() {
   const navigate = useNavigate();
 
   const problemSlug = slug || lessonId || "";
-  const externalUrl = `https://leetcode.com/problems/${problemSlug}`;
+  const externalUrl = `https://practice.com/problems/${problemSlug}`;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-semibold">LeetCode Practice</h2>
+          <h2 className="text-xl font-semibold">practice Practice</h2>
           <div className="text-sm text-neutral-500">
             Course: {courseId} • Problem: {problemSlug}
           </div>
@@ -26,12 +26,12 @@ export default function CodePracticePage() {
 
       <Card className="p-4">
         <p className="text-neutral-700 mb-4">
-          This will open the LeetCode problem in a new tab. You can also show
+          This will open the practice problem in a new tab. You can also show
           embedded editor or a custom coding playground here.
         </p>
         <div className="flex gap-2">
           <a href={externalUrl} target="_blank" rel="noreferrer">
-            <Button>Open on LeetCode</Button>
+            <Button>Open on practice</Button>
           </a>
           <Button
             variant="outline"

@@ -22,7 +22,7 @@ export default function QuizPage() {
   ];
 
   return (
-    <div>
+    <div className="p-4">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-semibold">Quiz</h2>

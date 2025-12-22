@@ -11,11 +11,37 @@ import {
   VideoLearningPage,
   AdminDashboard,
   AdminCourses,
+  AdminCourseDetail,
+  AdminCourseView,
   AdminUsers,
+  AdminUserView,
+  AdminUserNew,
+  AdminUserDetail,
   AdminReports,
   AdminCourseNew,
+  AdminCertificates,
+  AdminCertificateView,
+  AdminCertificateNew,
+  AdminCertificateDetail,
+  AdminCategories,
+  AdminCategoryNew,
+  AdminCategoryDetail,
+  AdminCategoryView,
+  AdminTags,
+  AdminTagNew,
+  AdminTagDetail,
+  AdminTagView,
+  AdminSpecializations,
+  AdminSpecializationNew,
+  AdminSpecializationDetail,
+  AdminSpecializationView,
+  AdminQuizzes,
+  AdminQuizNew,
+  AdminQuizDetail,
+  AdminQuizView,
   QuizPage,
   CodePracticePage,
+  CartPage,
 } from "@/pages";
 import AdminLayout from "@/layouts/AdminLayout";
 import MainLayout from "./layouts/MainLayout";
@@ -28,8 +54,17 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:id" element={<CourseDetailPage />} />
+          <Route path="/cart" element={<CartPage />} />
           <Route path="/courses/:id/learn/*" element={<VideoLearningPage />} />
         </Route>
+        <Route
+          path="/courses/:id/learn/lesson/:lessonId/quiz"
+          element={<QuizPage />}
+        />
+        <Route
+          path="/courses/:id/learn/lesson/:lessonId/practice/:slug"
+          element={<CodePracticePage />}
+        />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/settings" element={<SettingsPage />} />
@@ -38,18 +73,47 @@ function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="courses" element={<AdminCourses />} />
+          <Route path="courses/:id" element={<AdminCourseDetail />} />
+          <Route path="courses/:id/view" element={<AdminCourseView />} />
           <Route path="courses/new" element={<AdminCourseNew />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="users/new" element={<AdminUserNew />} />
+          <Route path="users/:id" element={<AdminUserDetail />} />
+          <Route path="users/:id/view" element={<AdminUserView />} />
           <Route path="reports" element={<AdminReports />} />
-        </Route>{" "}
-        <Route
-          path="/courses/:id/learn/lesson/:lessonId/quiz"
-          element={<QuizPage />}
-        />
-        <Route
-          path="/courses/:id/learn/lesson/:lessonId/leetcode/:slug"
-          element={<CodePracticePage />}
-        />{" "}
+          <Route path="certificates" element={<AdminCertificates />} />
+          <Route path="certificates/new" element={<AdminCertificateNew />} />
+          <Route path="certificates/:id" element={<AdminCertificateDetail />} />
+          <Route
+            path="certificates/:id/view"
+            element={<AdminCertificateView />}
+          />
+          <Route path="categories" element={<AdminCategories />} />
+          <Route path="categories/new" element={<AdminCategoryNew />} />
+          <Route path="categories/:id" element={<AdminCategoryDetail />} />
+          <Route path="categories/:id/view" element={<AdminCategoryView />} />
+          <Route path="tags" element={<AdminTags />} />
+          <Route path="tags/new" element={<AdminTagNew />} />
+          <Route path="tags/:id" element={<AdminTagDetail />} />
+          <Route path="tags/:id/view" element={<AdminTagView />} />
+          <Route path="specializations" element={<AdminSpecializations />} />
+          <Route
+            path="specializations/new"
+            element={<AdminSpecializationNew />}
+          />
+          <Route
+            path="specializations/:id"
+            element={<AdminSpecializationDetail />}
+          />
+          <Route
+            path="specializations/:id/view"
+            element={<AdminSpecializationView />}
+          />
+          <Route path="quizzes" element={<AdminQuizzes />} />
+          <Route path="quizzes/new" element={<AdminQuizNew />} />
+          <Route path="quizzes/:id" element={<AdminQuizDetail />} />
+          <Route path="quizzes/:id/view" element={<AdminQuizView />} />
+        </Route>
       </Routes>
     </Router>
   );

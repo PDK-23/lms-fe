@@ -8,10 +8,25 @@ import {
   LogOut,
   Menu,
   X,
+  Medal,
+  Tag as TagIcon,
+  Clipboard,
 } from "lucide-react";
 
 export default function AdminLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const navItems = [
+    { to: ".", label: "Dashboard", icon: Home, end: true },
+    { to: "courses", label: "Courses", icon: BookOpen },
+    { to: "quizzes", label: "Quizzes", icon: Clipboard },
+    { to: "categories", label: "Categories", icon: BookOpen },
+    { to: "tags", label: "Tags", icon: TagIcon },
+    { to: "specializations", label: "Specializations", icon: Medal },
+    { to: "certificates", label: "Certificates", icon: Medal },
+    { to: "users", label: "Users", icon: Users },
+    { to: "reports", label: "Reports", icon: BarChart3 },
+  ];
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -68,69 +83,30 @@ export default function AdminLayout() {
           </div>
 
           <nav className="space-y-1">
-            <NavLink
-              to="."
-              end
-              onClick={() => setIsSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded text-sm ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-neutral-700 hover:bg-neutral-50"
-                }`
-              }
-            >
-              <Home className="w-4 h-4 flex-shrink-0" />
-              <span>Dashboard</span>
-            </NavLink>
-
-            <NavLink
-              to="courses"
-              onClick={() => setIsSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded text-sm ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-neutral-700 hover:bg-neutral-50"
-                }`
-              }
-            >
-              <BookOpen className="w-4 h-4 flex-shrink-0" />
-              <span>Courses</span>
-            </NavLink>
-
-            <NavLink
-              to="users"
-              onClick={() => setIsSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded text-sm ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-neutral-700 hover:bg-neutral-50"
-                }`
-              }
-            >
-              <Users className="w-4 h-4 flex-shrink-0" />
-              <span>Users</span>
-            </NavLink>
-
-            <NavLink
-              to="reports"
-              onClick={() => setIsSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded text-sm ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-neutral-700 hover:bg-neutral-50"
-                }`
-              }
-            >
-              <BarChart3 className="w-4 h-4 flex-shrink-0" />
-              <span>Reports</span>
-            </NavLink>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded text-sm ${
+                      isActive
+                        ? "bg-indigo-50 text-indigo-700"
+                        : "text-neutral-700 hover:bg-neutral-50"
+                    }`
+                  }
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
           </nav>
 
-          <div className="mt-6 pt-4 border-t text-sm text-neutral-500">
+          <div className="mt-6 pt-4 border-t text-sm text-neutral-500 px-3">
             <button className="flex items-center gap-2 w-full text-left hover:text-neutral-700">
               <LogOut className="w-4 h-4" /> Sign out
             </button>
