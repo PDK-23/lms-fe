@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui";
 import { VideoPlayer } from "@/components/course/VideoPlayer";
@@ -39,6 +39,7 @@ export default function VideoLearningPage() {
             videoUrl:
               "https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
             isCompleted: true,
+            quizAvailable: true,
           },
           {
             id: "l3",
@@ -60,6 +61,7 @@ export default function VideoLearningPage() {
             videoUrl:
               "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
             isCompleted: false,
+            practiceId: "two-sum",
           },
           {
             id: "l5",
@@ -87,6 +89,7 @@ export default function VideoLearningPage() {
             duration: 30,
             videoUrl: undefined,
             isCompleted: false,
+            quizAvailable: true,
           },
           {
             id: "l8",
@@ -133,10 +136,11 @@ export default function VideoLearningPage() {
     ? allLessons.find((l) => l.id === lessonId)
     : allLessons[0];
 
+  const navigate = useNavigate();
+
   const handleLessonSelect = (lesson: Lesson) => {
-    // In a real app, you would navigate to the lesson URL
-    // navigate(`/course/${courseId}/lesson/${lesson.id}`);
-    console.log("Selected lesson:", lesson);
+    // navigate to lesson route so params reflect the current lesson
+    navigate(`/courses/${courseId}/learn/lesson/${lesson.id}`);
   };
 
   const handleMarkComplete = () => {
@@ -162,6 +166,7 @@ export default function VideoLearningPage() {
           {/* Left Sidebar - Course Contents */}
           <div className="lg:col-span-1">
             <VideoLessonPlayer
+              courseId={course.id}
               sections={sections}
               currentLesson={currentLesson}
               onLessonSelect={handleLessonSelect}

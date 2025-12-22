@@ -1,18 +1,31 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Play, Clock, Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  ChevronDown,
+  ChevronUp,
+  Play,
+  Clock,
+  Check,
+  FileText,
+  Code,
+} from "lucide-react";
 import type { Section, Lesson } from "@/types";
 
 interface VideoLessonPlayerProps {
+  courseId: string;
   sections: Section[];
   currentLesson?: Lesson;
   onLessonSelect: (lesson: Lesson) => void;
 }
 
 export function VideoLessonPlayer({
+  courseId,
   sections,
   currentLesson,
   onLessonSelect,
 }: VideoLessonPlayerProps) {
+  const navigate = useNavigate();
+
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({
@@ -85,34 +98,72 @@ export function VideoLessonPlayer({
             {expandedSections[section.id] && (
               <div className="bg-neutral-50">
                 {section.lessons?.map((lesson, idx) => (
-                  <button
+                  <div
                     key={lesson.id}
-                    onClick={() => onLessonSelect(lesson)}
-                    className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors border-l-2 ${
+                    className={`w-full px-4 py-3 border-l-2 ${
                       currentLesson?.id === lesson.id
                         ? "bg-indigo-50 border-l-indigo-600"
-                        : "hover:bg-neutral-100 border-l-transparent"
+                        : "border-l-transparent"
                     }`}
                   >
-                    <div className="flex-shrink-0">
-                      {lesson.isCompleted ? (
-                        <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                          <Check className="w-3 h-3 text-white" />
+                    <button
+                      onClick={() => onLessonSelect(lesson)}
+                      className="w-full flex items-center gap-3 text-left transition-colors"
+                    >
+                      <div className="flex-shrink-0">
+                        {lesson.isCompleted ? (
+                          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        ) : (
+                          <Play className="w-4 h-4 text-neutral-400 fill-neutral-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-neutral-900 truncate">
+                          {idx + 1}. {lesson.title}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-neutral-500 flex-shrink-0">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-3 h-3" />
+                          <span className="text-xs">{lesson.duration}m</span>
                         </div>
-                      ) : (
-                        <Play className="w-4 h-4 text-neutral-400 fill-neutral-400" />
+                      </div>
+                    </button>
+
+                    <div className="mt-2 flex items-center gap-2">
+                      {lesson.quizAvailable && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(
+                              `/courses/${courseId}/learn/lesson/${lesson.id}/quiz`
+                            );
+                          }}
+                          className="px-2 py-1 text-xs rounded bg-indigo-50 text-indigo-700 flex items-center gap-1"
+                          title="Open Quiz"
+                        >
+                          <FileText className="w-3 h-3" /> Quiz
+                        </button>
+                      )}
+
+                      {lesson.practiceId && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(
+                              `/courses/${courseId}/learn/lesson/${lesson.id}/leetcode/${lesson.practiceId}`
+                            );
+                          }}
+                          className="px-2 py-1 text-xs rounded bg-slate-50 text-slate-700 flex items-center gap-1"
+                          title="Open LeetCode"
+                        >
+                          <Code className="w-3 h-3" /> Practice
+                        </button>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-neutral-900 truncate">
-                        {idx + 1}. {lesson.title}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 text-neutral-500 flex-shrink-0">
-                      <Clock className="w-3 h-3" />
-                      <span className="text-xs">{lesson.duration}m</span>
-                    </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
