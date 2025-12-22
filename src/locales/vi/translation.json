@@ -1,0 +1,116 @@
+{
+  "app": {
+    "title": "Nền tảng học trực tuyến giống Coursera"
+  },
+  "nav": {
+    "home": "Trang chủ",
+    "courses": "Khóa học",
+    "instructors": "Giảng viên"
+  },
+  "cta": {
+    "enroll": "Đăng ký ngay"
+  },
+  "status": {
+    "loading": "Đang tải...",
+    "error": "Có lỗi xảy ra"
+  },
+  "auth": {
+    "login": {
+      "title": "Đăng nhập",
+      "subtitle": "Tiếp tục học hành với các khóa học yêu thích của bạn",
+      "emailLabel": "Email",
+      "emailPlaceholder": "your@email.com",
+      "passwordLabel": "Mật khẩu",
+      "passwordPlaceholder": "••••••••",
+      "remember": "Ghi nhớ tôi",
+      "forgot": "Quên mật khẩu?",
+      "submit": "Đăng nhập",
+      "submitting": "Đang đăng nhập...",
+      "socialGoogle": "Đăng nhập với Google",
+      "socialFacebook": "Đăng nhập với Facebook",
+      "or": "hoặc",
+      "noAccount": "Chưa có tài khoản?",
+      "signUp": "Đăng ký ngay",
+      "errors": {
+        "emailInvalid": "Email không hợp lệ",
+        "passwordMin": "Mật khẩu phải có ít nhất 6 ký tự",
+        "loginFailed": "Đăng nhập thất bại. Vui lòng thử lại."
+      }
+    },
+    "signup": {
+      "title": "Tạo tài khoản",
+      "subtitle": "Bắt đầu hành trình học tập của bạn ngay hôm nay",
+      "nameLabel": "Họ và tên",
+      "namePlaceholder": "Nguyễn Văn A",
+      "emailLabel": "Email",
+      "emailPlaceholder": "your@email.com",
+      "passwordLabel": "Mật khẩu",
+      "passwordPlaceholder": "••••••••",
+      "confirmPasswordLabel": "Xác nhận mật khẩu",
+      "terms": "Tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật",
+      "submit": "Tạo tài khoản",
+      "submitting": "Đang tạo tài khoản...",
+      "socialGoogle": "Đăng ký với Google",
+      "socialFacebook": "Đăng ký với Facebook",
+      "or": "hoặc",
+      "haveAccount": "Đã có tài khoản?",
+      "login": "Đăng nhập",
+      "passwordRequirements": {
+        "min6": "Ít nhất 6 ký tự",
+        "upper": "Chứa chữ hoa (A-Z)",
+        "lower": "Chứa chữ thường (a-z)",
+        "number": "Chứa số (0-9)"
+      },
+      "errors": {
+        "nameMin": "Tên phải có ít nhất 2 ký tự",
+        "emailInvalid": "Email không hợp lệ",
+        "passwordRequirement": "Mật khẩu phải chứa chữ hoa, chữ thường và số",
+        "passwordMismatch": "Mật khẩu không khớp",
+        "signupFailed": "Đăng ký thất bại. Vui lòng thử lại."
+      },
+      "termsPrefix": "Tôi đồng ý với",
+      "termsLink": "Điều khoản dịch vụ",
+      "privacyLink": "Chính sách bảo mật",
+      "and": "và"
+    }
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "subtitle": "Cập nhật thông tin cá nhân",
+    "nameLabel": "Họ và tên",
+    "emailLabel": "Email",
+    "save": "Lưu thay đổi",
+    "saved": "Đã cập nhật thông tin",
+    "notSignedIn": "Bạn chưa đăng nhập"
+  },
+  "header": {
+    "browse": "Duyệt",
+    "myCourses": "Khóa học của tôi",
+    "about": "Giới thiệu",
+    "settings": "Cài đặt",
+    "profile": "Hồ sơ",
+    "purchases": "Mua hàng",
+    "certificates": "Chứng chỉ",
+    "logout": "Đăng xuất",
+    "signIn": "Đăng nhập",
+    "language": "Ngôn ngữ",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Tìm khóa học...",
+    "searchCancel": "Hủy"
+  },
+  "purchases": {
+    "title": "Mua hàng của bạn",
+    "empty": "Bạn chưa mua gì. Duyệt khóa học để mua ngay."
+  },
+  "certificates": {
+    "title": "Chứng chỉ của bạn",
+    "empty": "Bạn chưa có chứng chỉ nào. Hoàn thành khóa học để nhận chứng chỉ."
+  },
+  "course": {
+    "notFound": "Không tìm thấy khóa học",
+    "curriculum": "Giáo trình",
+    "aboutInstructor": "Về giảng viên",
+    "moreFromInstructor": "Các khóa khác của giảng viên",
+    "relatedCourses": "Khóa học cùng chủ đề"
+  }
+}

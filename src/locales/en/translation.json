@@ -1,0 +1,116 @@
+{
+  "app": {
+    "title": "Coursera-like Learning Platform"
+  },
+  "nav": {
+    "home": "Home",
+    "courses": "Courses",
+    "instructors": "Instructors"
+  },
+  "cta": {
+    "enroll": "Enroll Now"
+  },
+  "status": {
+    "loading": "Loading...",
+    "error": "Something went wrong"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign In",
+      "subtitle": "Continue learning with your favorite courses",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@email.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "••••••••",
+      "remember": "Remember me",
+      "forgot": "Forgot password?",
+      "submit": "Sign In",
+      "submitting": "Signing in...",
+      "socialGoogle": "Sign in with Google",
+      "socialFacebook": "Sign in with Facebook",
+      "or": "or",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "errors": {
+        "emailInvalid": "Invalid email",
+        "passwordMin": "Password must be at least 6 characters",
+        "loginFailed": "Sign in failed. Please try again."
+      }
+    },
+    "signup": {
+      "title": "Create account",
+      "subtitle": "Start your learning journey today",
+      "nameLabel": "Full name",
+      "namePlaceholder": "John Doe",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@email.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "••••••••",
+      "confirmPasswordLabel": "Confirm password",
+      "terms": "I agree to the Terms of Service and Privacy Policy",
+      "submit": "Create account",
+      "submitting": "Creating account...",
+      "socialGoogle": "Sign up with Google",
+      "socialFacebook": "Sign up with Facebook",
+      "or": "or",
+      "haveAccount": "Already have an account?",
+      "login": "Sign in",
+      "passwordRequirements": {
+        "min6": "At least 6 characters",
+        "upper": "Contains uppercase (A-Z)",
+        "lower": "Contains lowercase (a-z)",
+        "number": "Contains a number (0-9)"
+      },
+      "errors": {
+        "nameMin": "Name must be at least 2 characters",
+        "emailInvalid": "Invalid email",
+        "passwordRequirement": "Password must contain uppercase, lowercase and number",
+        "passwordMismatch": "Passwords do not match",
+        "signupFailed": "Sign up failed. Please try again."
+      },
+      "termsPrefix": "I agree to the",
+      "termsLink": "Terms of Service",
+      "privacyLink": "Privacy Policy",
+      "and": "and"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Update your profile",
+    "nameLabel": "Full name",
+    "emailLabel": "Email",
+    "save": "Save changes",
+    "saved": "Profile updated",
+    "notSignedIn": "You are not signed in"
+  },
+  "header": {
+    "browse": "Browse",
+    "myCourses": "My Courses",
+    "about": "About",
+    "settings": "Settings",
+    "profile": "Profile",
+    "purchases": "Purchases",
+    "certificates": "Certificates",
+    "logout": "Log out",
+    "signIn": "Sign In",
+    "language": "Language",
+    "search": "Search",
+    "searchPlaceholder": "Search courses...",
+    "searchCancel": "Cancel"
+  },
+  "purchases": {
+    "title": "Your purchases",
+    "empty": "You have no purchases yet. Browse courses to buy."
+  },
+  "certificates": {
+    "title": "Your certificates",
+    "empty": "You don't have any certificates yet. Complete courses to earn certificates."
+  },
+  "course": {
+    "notFound": "Course not found",
+    "curriculum": "Curriculum",
+    "aboutInstructor": "About the instructor",
+    "moreFromInstructor": "More from this instructor",
+    "relatedCourses": "Related courses"
+  }
+}
