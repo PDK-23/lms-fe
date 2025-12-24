@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Input, Card } from "@/components/ui";
 import specializationService from "@/services/specializationService";
@@ -8,21 +8,45 @@ import type { Specialization, Course } from "@/types";
 export default function AdminSpecializationDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const s = id ? specializationService.getSpecializationById(id) : undefined;
-
-  const [name, setName] = useState(s?.name || "");
-  const [description, setDescription] = useState(s?.description || "");
+  const [s, setS] = useState<Specialization | null>(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
-  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(
-    s?.courseIds || []
-  );
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
+  const fetchData = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const [specialization, courses] = await Promise.all([
+        specializationService.getSpecializationById(id),
+        courseService.getCourses(),
+      ]);
+      if (specialization) {
+        setS(specialization);
+        setName(specialization.name || "");
+        setDescription(specialization.description || "");
+        setSelectedCourseIds(specialization.courseIds || []);
+      }
+      setAvailableCourses(courses);
+    } catch (error) {
+      console.error("Failed to fetch specialization:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
-    setAvailableCourses(courseService.getCourses());
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -37,17 +61,32 @@ export default function AdminSpecializationDetail() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   if (!s) return <div>Specialization not found</div>;
 
-  function save() {
-    const updated: Specialization = {
-      id: String(s!.id),
-      name,
-      description,
-      courseIds: selectedCourseIds,
-    };
-    specializationService.updateSpecialization(updated);
-    navigate("/admin/specializations");
+  async function save() {
+    try {
+      setSaving(true);
+      const updated: Specialization = {
+        id: String(s!.id),
+        name,
+        description,
+        courseIds: selectedCourseIds,
+      };
+      await specializationService.updateSpecialization(updated.id, updated);
+      navigate("/admin/specializations");
+    } catch (error) {
+      console.error("Failed to update specialization:", error);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -165,7 +204,9 @@ export default function AdminSpecializationDetail() {
             <Button variant="outline" onClick={() => navigate(-1)}>
               Cancel
             </Button>
-            <Button onClick={save}>Save</Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </div>
         </div>
       </Card>

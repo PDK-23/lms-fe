@@ -1,57 +1,116 @@
-import { SPECIALIZATIONS as SEED } from "@/mocks/specializations";
+import { get, post, put, del, type PageResponse } from "@/lib/api";
 import type { Specialization } from "@/types";
 
-const STORAGE_KEY = "mock_specializations_v1";
+// Backend Specialization DTO
+interface SpecializationDTO {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  thumbnail?: string;
+  courseIds?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt?: string;
+}
 
-function load(): Specialization[] {
+// Transform backend DTO to frontend type
+function toSpecialization(dto: SpecializationDTO): Specialization {
+  return {
+    id: String(dto.id),
+    name: dto.name,
+    description: dto.description,
+    courseIds: dto.courseIds
+      ? dto.courseIds.split(",").map((id) => id.trim())
+      : undefined,
+  };
+}
+
+// Transform frontend type to backend DTO
+function toSpecializationDTO(
+  spec: Partial<Specialization>
+): Partial<SpecializationDTO> {
+  return {
+    name: spec.name,
+    description: spec.description,
+    courseIds: spec.courseIds?.join(","),
+  };
+}
+
+export async function getSpecializations(): Promise<Specialization[]> {
+  const data = await get<SpecializationDTO[]>("/specializations/all");
+  return data.map(toSpecialization);
+}
+
+export async function getSpecializationsPaginated(
+  page = 0,
+  size = 10
+): Promise<PageResponse<Specialization>> {
+  const response = await get<PageResponse<SpecializationDTO>>(
+    "/specializations",
+    { page, size }
+  );
+  return {
+    ...response,
+    content: response.content.map(toSpecialization),
+  };
+}
+
+export async function getActive(): Promise<Specialization[]> {
+  const data = await get<SpecializationDTO[]>("/specializations/active");
+  return data.map(toSpecialization);
+}
+
+export async function getSpecializationById(
+  id: string
+): Promise<Specialization | null> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Specialization[];
-  } catch (e) {
-    console.warn("Failed to read specializations from localStorage", e);
+    const data = await get<SpecializationDTO>(`/specializations/${id}`);
+    return toSpecialization(data);
+  } catch {
+    return null;
   }
-  return JSON.parse(JSON.stringify(SEED)) as Specialization[];
 }
 
-function save(items: Specialization[]) {
+export async function getSpecializationBySlug(
+  slug: string
+): Promise<Specialization | null> {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch (e) {
-    console.warn("Failed to write specializations to localStorage", e);
+    const data = await get<SpecializationDTO>(`/specializations/slug/${slug}`);
+    return toSpecialization(data);
+  } catch {
+    return null;
   }
 }
 
-let items = load();
-
-export function getSpecializations(): Specialization[] {
-  return items;
+export async function addSpecialization(
+  spec: Omit<Specialization, "id">
+): Promise<Specialization> {
+  const dto = toSpecializationDTO(spec);
+  const data = await post<SpecializationDTO>("/specializations", dto);
+  return toSpecialization(data);
 }
 
-export function getSpecializationById(id: string): Specialization | undefined {
-  return items.find((s) => s.id === id);
+export async function updateSpecialization(
+  id: string,
+  spec: Partial<Specialization>
+): Promise<Specialization> {
+  const dto = toSpecializationDTO(spec);
+  const data = await put<SpecializationDTO>(`/specializations/${id}`, dto);
+  return toSpecialization(data);
 }
 
-export function addSpecialization(s: Specialization) {
-  items.push(JSON.parse(JSON.stringify(s)));
-  save(items);
-}
-
-export function updateSpecialization(updated: Specialization) {
-  const i = items.findIndex((s) => s.id === updated.id);
-  if (i >= 0) {
-    items[i] = JSON.parse(JSON.stringify(updated));
-    save(items);
-  }
-}
-
-export function deleteSpecialization(id: string) {
-  items = items.filter((s) => s.id !== id);
-  save(items);
+export async function deleteSpecialization(id: string): Promise<void> {
+  await del(`/specializations/${id}`);
 }
 
 export default {
   getSpecializations,
+  getSpecializationsPaginated,
+  getActive,
   getSpecializationById,
+  getSpecializationBySlug,
   addSpecialization,
   updateSpecialization,
   deleteSpecialization,

@@ -8,15 +8,23 @@ export default function AdminTagNew() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [color, setColor] = useState("#e5e7eb");
+  const [saving, setSaving] = useState(false);
 
-  function save() {
-    const t: Tag = {
-      id: Date.now().toString(),
-      name: name || "tag",
-      color,
-    };
-    tagService.addTag(t);
-    navigate("/admin/tags");
+  async function save() {
+    try {
+      setSaving(true);
+      const t: Tag = {
+        id: Date.now().toString(),
+        name: name || "tag",
+        color,
+      };
+      await tagService.addTag(t);
+      navigate("/admin/tags");
+    } catch (error) {
+      console.error("Failed to create tag:", error);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -35,7 +43,9 @@ export default function AdminTagNew() {
           <Button variant="outline" onClick={() => navigate(-1)}>
             Cancel
           </Button>
-          <Button onClick={save}>Create</Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Creating..." : "Create"}
+          </Button>
         </div>
       </div>
     </div>

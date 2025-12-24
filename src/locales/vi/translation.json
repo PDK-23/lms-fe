@@ -34,7 +34,8 @@
       "errors": {
         "emailInvalid": "Email không hợp lệ",
         "passwordMin": "Mật khẩu phải có ít nhất 6 ký tự",
-        "loginFailed": "Đăng nhập thất bại. Vui lòng thử lại."
+        "loginFailed": "Đăng nhập thất bại. Vui lòng thử lại.",
+        "invalidCredentials": "Email hoặc mật khẩu không chính xác"
       }
     },
     "signup": {
@@ -66,7 +67,8 @@
         "emailInvalid": "Email không hợp lệ",
         "passwordRequirement": "Mật khẩu phải chứa chữ hoa, chữ thường và số",
         "passwordMismatch": "Mật khẩu không khớp",
-        "signupFailed": "Đăng ký thất bại. Vui lòng thử lại."
+        "signupFailed": "Đăng ký thất bại. Vui lòng thử lại.",
+        "emailExists": "Email này đã được đăng ký"
       },
       "termsPrefix": "Tôi đồng ý với",
       "termsLink": "Điều khoản dịch vụ",

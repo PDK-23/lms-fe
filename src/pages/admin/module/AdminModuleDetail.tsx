@@ -1,5 +1,5 @@
 import { Card, Button, Input } from "@/components/ui";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 import moduleService from "@/services/moduleService";
@@ -10,6 +10,8 @@ export default function AdminModuleDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [module, setModule] = useState<Module | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [icon, setIcon] = useState("");
@@ -19,27 +21,41 @@ export default function AdminModuleDetail() {
     Array<{ id: string; name: string }>
   >([]);
 
-  useEffect(() => {
-    if (!id) return;
-    const found = moduleService.getById(id);
-    if (!found) {
-      alert("Module not found");
-      navigate("/admin/modules");
+  const fetchData = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
       return;
     }
-    setModule(found);
-    setName(found.name);
-    setUrl(found.url);
-    setIcon(found.icon || "");
-    setDescription(found.description || "");
-    setModuleGroupId(found.moduleGroupId);
+    try {
+      setLoading(true);
+      const [found, groups] = await Promise.all([
+        moduleService.getById(id),
+        moduleGroupService.getAll(),
+      ]);
+      if (!found) {
+        alert("Module not found");
+        navigate("/admin/modules");
+        return;
+      }
+      setModule(found);
+      setName(found.name);
+      setUrl(found.url);
+      setIcon(found.icon || "");
+      setDescription(found.description || "");
+      setModuleGroupId(found.moduleGroupId);
+      setModuleGroups(groups);
+    } catch (error) {
+      console.error("Failed to fetch module:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [id, navigate]);
 
   useEffect(() => {
-    setModuleGroups(moduleGroupService.getAll());
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !module) return;
     if (!name.trim() || !url.trim() || !moduleGroupId) {
@@ -47,16 +63,30 @@ export default function AdminModuleDetail() {
       return;
     }
 
-    moduleService.update(id, {
-      name: name.trim(),
-      url: url.trim(),
-      icon: icon.trim() || undefined,
-      description: description.trim() || undefined,
-      moduleGroupId,
-    });
-
-    navigate("/admin/modules");
+    try {
+      setSaving(true);
+      await moduleService.update(id, {
+        name: name.trim(),
+        url: url.trim(),
+        icon: icon.trim() || undefined,
+        description: description.trim() || undefined,
+        moduleGroupId,
+      });
+      navigate("/admin/modules");
+    } catch (error) {
+      console.error("Failed to update module:", error);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!module) return null;
 
@@ -150,9 +180,9 @@ export default function AdminModuleDetail() {
             >
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
-              Save Changes
+              {saving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

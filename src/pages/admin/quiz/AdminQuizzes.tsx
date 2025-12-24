@@ -1,5 +1,5 @@
 import { Card, Button, Input } from "@/components/ui";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Edit2, Trash2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import quizService from "@/services/quizService";
@@ -7,28 +7,59 @@ import type { Quiz } from "@/types";
 
 export default function AdminQuizzes() {
   const navigate = useNavigate();
-  const [quizzes, setQuizzes] = useState<Quiz[]>(quizService.getQuizzes());
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  function refresh() {
-    setQuizzes(quizService.getQuizzes());
-  }
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await quizService.getQuizzes();
+      setQuizzes(result);
+    } catch (error) {
+      console.error("Failed to fetch quizzes:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await quizService.deleteQuiz(id);
+      setConfirmDelete(null);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete quiz:", error);
+    }
+  };
 
   const filtered = quizzes.filter((q) =>
     q.title.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg sm:text-xl font-semibold">Quizzes</h2>
         <div className="flex items-center gap-6">
-          {/* <Input
+          <Input
             value={search}
             placeholder="Search quizzes"
             onChange={(e) => setSearch(e.target.value)}
-          /> */}
+          />
           <Button
             className="flex gap-2 items-center"
             onClick={() => navigate("/admin/quizzes/new")}
@@ -114,11 +145,7 @@ export default function AdminQuizzes() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  quizService.deleteQuiz(confirmDelete);
-                  setConfirmDelete(null);
-                  refresh();
-                }}
+                onClick={() => handleDelete(confirmDelete)}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete

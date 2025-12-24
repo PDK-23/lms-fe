@@ -11,6 +11,19 @@ export default function AdminPracticeNew() {
     title: "",
     slug: "",
   } as Practice);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    try {
+      setSaving(true);
+      await practiceService.addPractice(practice);
+      navigate("/admin/practices");
+    } catch (error) {
+      console.error("Failed to create practice:", error);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -116,13 +129,8 @@ export default function AdminPracticeNew() {
             >
               Cancel
             </Button>
-            <Button
-              onClick={() => {
-                practiceService.addPractice(practice);
-                navigate("/admin/practices");
-              }}
-            >
-              Save
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>

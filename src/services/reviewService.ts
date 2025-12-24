@@ -1,65 +1,137 @@
-import MOCK_REVIEWS from "@/mocks/reviews";
+import { get, post, put, del, type PageResponse } from "@/lib/api";
 import type { Review } from "@/types";
 
-const STORAGE_KEY = "mock_reviews_v1";
+// Backend Review DTO
+interface ReviewDTO {
+  id: number;
+  courseId: number;
+  userId: number;
+  studentName?: string;
+  rating: number;
+  comment?: string;
+  helpful: number;
+  createdAt: string;
+  updatedAt?: string;
+}
 
-function loadAll(): Review[] {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw) as Review[];
-      return parsed.map((r) => ({ ...r, date: new Date(r.date) }));
-    } catch (e) {
-      console.error("Failed to parse reviews from storage", e);
-      // fall through to seed
-    }
+// Transform backend DTO to frontend type
+function toReview(dto: ReviewDTO): Review {
+  return {
+    id: String(dto.id),
+    courseId: String(dto.courseId),
+    studentName: dto.studentName || "Anonymous",
+    rating: dto.rating,
+    comment: dto.comment || "",
+    date: new Date(dto.createdAt),
+    helpful: dto.helpful,
+  };
+}
+
+export async function getReviews(): Promise<Review[]> {
+  const response = await get<PageResponse<ReviewDTO>>("/reviews", {
+    page: 0,
+    size: 1000,
+  });
+  return response.content.map(toReview);
+}
+
+export async function getReviewsPaginated(
+  page = 0,
+  size = 10
+): Promise<PageResponse<Review>> {
+  const response = await get<PageResponse<ReviewDTO>>("/reviews", {
+    page,
+    size,
+  });
+  return {
+    ...response,
+    content: response.content.map(toReview),
+  };
+}
+
+export async function getReviewById(id: string): Promise<Review | null> {
+  try {
+    const data = await get<ReviewDTO>(`/reviews/${id}`);
+    return toReview(data);
+  } catch {
+    return null;
   }
-
-  // seed from mocks
-  const seed = MOCK_REVIEWS.map((r) => ({ ...r }));
-  saveAll(seed);
-  return seed.map((r) => ({ ...r, date: new Date(r.date) }));
 }
 
-function saveAll(items: Review[]) {
-  const serial = items.map((r) => ({
-    ...r,
-    date: r.date instanceof Date ? r.date.toISOString() : r.date,
-  }));
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(serial));
+export async function getByCourseId(courseId: string): Promise<Review[]> {
+  const data = await get<ReviewDTO[]>(`/reviews/course/${courseId}`);
+  return data.map(toReview);
 }
 
-function getByCourseId(courseId: string): Review[] {
-  return loadAll()
-    .filter((r) => r.courseId === courseId)
-    .sort((a, b) => b.date.getTime() - a.date.getTime());
+export async function getByCourseIdPaginated(
+  courseId: string,
+  page = 0,
+  size = 10
+): Promise<PageResponse<Review>> {
+  const response = await get<PageResponse<ReviewDTO>>(
+    `/reviews/course/${courseId}/paginated`,
+    { page, size }
+  );
+  return {
+    ...response,
+    content: response.content.map(toReview),
+  };
 }
 
-function addReview(payload: {
+export async function addReview(payload: {
   courseId: string;
   studentName: string;
   rating: number;
   comment: string;
-}): Review {
-  const all = loadAll();
-  const id = `r${Date.now()}`;
-  const review: Review = {
-    id,
-    courseId: payload.courseId,
+}): Promise<Review> {
+  const dto = {
+    courseId: Number(payload.courseId),
+    userId: 1, // TODO: Get from auth context
     studentName: payload.studentName,
     rating: payload.rating,
     comment: payload.comment,
-    date: new Date(),
-    helpful: 0,
   };
-  all.push(review);
-  saveAll(all);
-  return review;
+  const data = await post<ReviewDTO>("/reviews", dto);
+  return toReview(data);
+}
+
+export async function updateReview(
+  id: string,
+  payload: Partial<{ rating: number; comment: string }>
+): Promise<Review> {
+  const data = await put<ReviewDTO>(`/reviews/${id}`, payload);
+  return toReview(data);
+}
+
+export async function deleteReview(id: string): Promise<void> {
+  await del(`/reviews/${id}`);
+}
+
+export async function markHelpful(id: string): Promise<Review> {
+  const data = await post<ReviewDTO>(`/reviews/${id}/helpful`);
+  return toReview(data);
+}
+
+// Compatibility functions for existing code
+function _loadAll(): Review[] {
+  // This is now a no-op since we use the API
+  return [];
+}
+
+function _saveAll(_items: Review[]): void {
+  // This is now a no-op since we use the API
 }
 
 export default {
   getByCourseId,
+  getByCourseIdPaginated,
   addReview,
-  _loadAll: loadAll,
-  _saveAll: saveAll,
+  updateReview,
+  deleteReview,
+  markHelpful,
+  getReviews,
+  getReviewsPaginated,
+  getReviewById,
+  _loadAll,
+  _saveAll,
 };

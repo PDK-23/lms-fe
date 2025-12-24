@@ -1,14 +1,39 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui";
 import { VideoPlayer } from "@/components/course/VideoPlayer";
 import { VideoLessonPlayer } from "@/components/course/VideoLessonPlayer";
 import { InstructorBlock } from "@/components/course/CourseDetail";
-import ALL_COURSES, { getCourseSections } from "@/mocks/courses";
-import { getLessonData } from "@/mocks/lessonData";
-import type { Lesson, Section } from "@/types";
+import courseService from "@/services/courseService";
+import type { Lesson, Section, Course } from "@/types";
 import { ThumbsUp, Home } from "lucide-react";
+
+// Default lesson data structure
+const defaultLessonData = {
+  description:
+    "This lesson covers important concepts in the course curriculum.",
+  additionalInfo:
+    "Take your time to understand the material and practice regularly.",
+  comments: [] as Array<{
+    id: string;
+    author: string;
+    authorInitials: string;
+    avatarColor: string;
+    timestamp: string;
+    content: string;
+    likes: number;
+    replies: Array<{
+      id: string;
+      author: string;
+      authorInitials: string;
+      avatarColor: string;
+      timestamp: string;
+      content: string;
+      likes: number;
+    }>;
+  }>,
+};
 
 export default function LessonPage() {
   const { t } = useTranslation();
@@ -18,25 +43,49 @@ export default function LessonPage() {
   const [activeTab, setActiveTab] = useState<"description" | "comments">(
     "description"
   );
+  const navigate = useNavigate();
 
-  const course = ALL_COURSES.find((c) => c.id === courseId);
+  const [course, setCourse] = useState<Course | null>(null);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Get lesson-specific data based on current lesson ID
-  const lessonData = getLessonData(lessonId || "l1");
+  const fetchCourse = useCallback(async () => {
+    if (!courseId) return;
+    try {
+      setLoading(true);
+      const courseData = await courseService.getCourseById(courseId);
+      setCourse(courseData);
+      // If backend doesn't include sections in course payload, fetch sections separately
+      if (!courseData?.sections || courseData.sections.length === 0) {
+        try {
+          const fetchedSections = await courseService.getSections(courseId);
+          setSections(fetchedSections || []);
+        } catch (err) {
+          console.error("Failed to fetch sections:", err);
+          setSections([]);
+        }
+      } else {
+        setSections(courseData.sections);
+      }
+    } catch (error) {
+      console.error("Failed to fetch course:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [courseId]);
 
-  // Get course sections from mock data
-  const sections = useMemo((): Section[] => {
-    if (!course) return [];
-    return getCourseSections(courseId);
-  }, [course, courseId]);
+  useEffect(() => {
+    fetchCourse();
+  }, [fetchCourse]);
+
+  // Get lesson-specific data (using default for now)
+  const lessonData = defaultLessonData;
 
   // Find current lesson (default to first lesson if not specified)
   const allLessons = sections.flatMap((s) => s.lessons);
   const currentLesson = lessonId
     ? allLessons.find((l) => l.id === lessonId)
     : allLessons[0];
-
-  const navigate = useNavigate();
 
   const handleLessonSelect = (lesson: Lesson) => {
     // navigate to lesson route so params reflect the current lesson
@@ -49,6 +98,14 @@ export default function LessonPage() {
       // In a real app, you would update this in the backend
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!course) {
     return (

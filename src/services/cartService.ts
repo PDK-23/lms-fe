@@ -1,6 +1,9 @@
 import type { CartItem, Course } from "@/types";
 
-const STORAGE_KEY = "mock_cart_v1";
+// Cart is managed locally in localStorage (not on server)
+// This keeps the same behavior as before but could be extended to sync with backend
+
+const STORAGE_KEY = "lms_cart_v1";
 let items: CartItem[] = load();
 
 function load(): CartItem[] {
@@ -70,9 +73,16 @@ export function subscribe(cb: () => void) {
   };
 }
 
+export function getTotal(): number {
+  return items.reduce((total, item) => {
+    return total + (item.course?.price || 0) * (item.quantity || 1);
+  }, 0);
+}
+
 export default {
   getCart,
   getCount,
+  getTotal,
   addToCart,
   removeFromCart,
   updateQuantity,

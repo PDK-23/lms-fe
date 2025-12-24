@@ -1,75 +1,106 @@
-import MOCK_MODULE_GROUPS from "@/mocks/moduleGroups";
+import { get, post, put, del, type PageResponse } from "@/lib/api";
 import type { ModuleGroup } from "@/types";
 
-const STORAGE_KEY = "mock_module_groups_v1";
-
-function loadAll(): ModuleGroup[] {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw) as ModuleGroup[];
-      return parsed.map((mg) => ({ ...mg, createdAt: new Date(mg.createdAt) }));
-    } catch (e) {
-      console.error("Failed to parse module groups from storage", e);
-    }
-  }
-  const seed = MOCK_MODULE_GROUPS.map((mg) => ({ ...mg }));
-  saveAll(seed);
-  return seed.map((mg) => ({ ...mg, createdAt: new Date(mg.createdAt) }));
+// Backend ModuleGroup DTO
+interface ModuleGroupDTO {
+  id: number;
+  name: string;
+  description?: string;
+  icon?: string;
+  url?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdById?: number;
+  createdAt: string;
+  updatedById?: number;
+  updatedAt?: string;
 }
 
-function saveAll(items: ModuleGroup[]) {
-  const serial = items.map((mg) => ({
-    ...mg,
-    createdAt:
-      mg.createdAt instanceof Date ? mg.createdAt.toISOString() : mg.createdAt,
-  }));
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(serial));
-}
-
-function getAll(): ModuleGroup[] {
-  return loadAll();
-}
-
-function getById(id: string): ModuleGroup | undefined {
-  return loadAll().find((mg) => mg.id === id);
-}
-
-function add(payload: Omit<ModuleGroup, "id" | "createdAt">): ModuleGroup {
-  const all = loadAll();
-  const id = `mg${Date.now()}`;
-  const newGroup: ModuleGroup = {
-    id,
-    ...payload,
-    createdAt: new Date(),
+// Transform backend DTO to frontend type
+function toModuleGroup(dto: ModuleGroupDTO): ModuleGroup {
+  return {
+    id: String(dto.id),
+    name: dto.name,
+    description: dto.description,
+    icon: dto.icon || "📁",
+    url: dto.url || "",
+    createdById: dto.createdById ? String(dto.createdById) : "",
+    createdAt: new Date(dto.createdAt),
+    updatedById: dto.updatedById ? String(dto.updatedById) : undefined,
+    updatedAt: dto.updatedAt ? new Date(dto.updatedAt) : undefined,
   };
-  all.push(newGroup);
-  saveAll(all);
-  return newGroup;
 }
 
-function update(
+// Transform frontend type to backend DTO
+function toModuleGroupDTO(
+  moduleGroup: Partial<ModuleGroup>
+): Partial<ModuleGroupDTO> {
+  return {
+    name: moduleGroup.name,
+    description: moduleGroup.description,
+    icon: moduleGroup.icon,
+    url: moduleGroup.url,
+  };
+}
+
+export async function getAll(): Promise<ModuleGroup[]> {
+  const data = await get<ModuleGroupDTO[]>("/module-groups/all");
+  return data.map(toModuleGroup);
+}
+
+export async function getAllPaginated(
+  page = 0,
+  size = 10
+): Promise<PageResponse<ModuleGroup>> {
+  const response = await get<PageResponse<ModuleGroupDTO>>("/module-groups", {
+    page,
+    size,
+  });
+  return {
+    ...response,
+    content: response.content.map(toModuleGroup),
+  };
+}
+
+export async function getActive(): Promise<ModuleGroup[]> {
+  const data = await get<ModuleGroupDTO[]>("/module-groups/active");
+  return data.map(toModuleGroup);
+}
+
+export async function getById(id: string): Promise<ModuleGroup | null> {
+  try {
+    const data = await get<ModuleGroupDTO>(`/module-groups/${id}`);
+    return toModuleGroup(data);
+  } catch {
+    return null;
+  }
+}
+
+export async function add(
+  payload: Omit<ModuleGroup, "id" | "createdAt">
+): Promise<ModuleGroup> {
+  const dto = toModuleGroupDTO(payload);
+  const data = await post<ModuleGroupDTO>("/module-groups", dto);
+  return toModuleGroup(data);
+}
+
+export async function update(
   id: string,
   payload: Partial<Omit<ModuleGroup, "id" | "createdAt">>
-): ModuleGroup | null {
-  const all = loadAll();
-  const idx = all.findIndex((mg) => mg.id === id);
-  if (idx === -1) return null;
-  all[idx] = { ...all[idx], ...payload };
-  saveAll(all);
-  return all[idx];
+): Promise<ModuleGroup> {
+  const dto = toModuleGroupDTO(payload);
+  const data = await put<ModuleGroupDTO>(`/module-groups/${id}`, dto);
+  return toModuleGroup(data);
 }
 
-function remove(id: string): boolean {
-  const all = loadAll();
-  const filtered = all.filter((mg) => mg.id !== id);
-  if (filtered.length === all.length) return false;
-  saveAll(filtered);
-  return true;
+export async function remove(id: string): Promise<void> {
+  await del(`/module-groups/${id}`);
 }
 
 export default {
   getAll,
+  getAllPaginated,
+  getActive,
   getById,
   add,
   update,

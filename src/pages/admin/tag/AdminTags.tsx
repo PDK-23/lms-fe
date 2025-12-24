@@ -1,5 +1,5 @@
 import { Card, Button, Input } from "@/components/ui";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Eye, Edit2, Trash2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import tagService from "@/services/tagService";
@@ -7,17 +7,48 @@ import type { Tag } from "@/types";
 
 export default function AdminTags() {
   const navigate = useNavigate();
-  const [tags, setTags] = useState<Tag[]>(tagService.getTags());
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  function refresh() {
-    setTags(tagService.getTags());
-  }
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await tagService.getTags();
+      setTags(result);
+    } catch (error) {
+      console.error("Failed to fetch tags:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await tagService.deleteTag(id);
+      setConfirmDelete(null);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete tag:", error);
+    }
+  };
 
   const filtered = tags.filter((t) =>
     t.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -114,11 +145,7 @@ export default function AdminTags() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  tagService.deleteTag(confirmDelete);
-                  setConfirmDelete(null);
-                  refresh();
-                }}
+                onClick={() => handleDelete(confirmDelete)}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete

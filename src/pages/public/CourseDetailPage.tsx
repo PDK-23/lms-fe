@@ -1,10 +1,10 @@
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui";
-import ALL_COURSES, { getCourseSections } from "@/mocks/courses";
+import courseService from "@/services/courseService";
 import reviewService from "@/services/reviewService";
-import type { Review } from "@/types";
+import type { Review, Course, Section } from "@/types";
 import { Curriculum } from "@/components/course/CourseDetail";
 import cartService from "@/services/cartService";
 import RelatedCourses from "@/components/course/RelatedCourses";
@@ -15,36 +15,95 @@ export default function CourseDetailPage() {
   const params = useParams();
   const id = params.id || "";
   const navigate = useNavigate();
-  const course = ALL_COURSES.find((c) => c.id === id);
 
-  // Get sections from mock data
-  const sections = useMemo(() => {
-    if (!course) return [];
-    return getCourseSections(id);
-  }, [course, id]);
-
+  const [course, setCourse] = useState<Course | null>(null);
+  const [sections, setSections] = useState<Section[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [relatedCourses, setRelatedCourses] = useState<Course[]>([]);
+  const [instructorCourses, setInstructorCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!id) return;
-    setReviews(reviewService.getByCourseId(id));
+
+    try {
+      setLoading(true);
+      const [courseData, reviewsData, allCourses] = await Promise.all([
+        courseService.getCourseById(id),
+        reviewService.getByCourseId(id),
+        courseService.getCourses(),
+      ]);
+
+      setCourse(courseData);
+      setReviews(reviewsData);
+
+      if (courseData) {
+        // Get sections from course data; fallback to fetching sections separately when backend doesn't return them
+        if (!courseData.sections || courseData.sections.length === 0) {
+          try {
+            const fetchedSections = await courseService.getSections(id);
+            setSections(fetchedSections || []);
+          } catch (err) {
+            console.error("Failed to fetch sections:", err);
+            setSections([]);
+          }
+        } else {
+          setSections(courseData.sections);
+        }
+
+        // Get related courses
+        const related = allCourses
+          .filter(
+            (c) =>
+              c.category.id === courseData.category.id && c.id !== courseData.id
+          )
+          .slice(0, 4);
+        setRelatedCourses(related);
+
+        // Get instructor's other courses
+        const instructorOther = allCourses
+          .filter(
+            (c) =>
+              c.instructor.id === courseData.instructor.id &&
+              c.id !== courseData.id
+          )
+          .slice(0, 3);
+        setInstructorCourses(instructorOther);
+      }
+    } catch (error) {
+      console.error("Failed to fetch course details:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  const handleAddReview = (payload: {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleAddReview = async (payload: {
     studentName: string;
     rating: number;
     comment: string;
   }) => {
-    const newReview = reviewService.addReview({ courseId: id, ...payload });
-    setReviews((prev) => [newReview, ...prev]);
+    try {
+      const newReview = await reviewService.addReview({
+        courseId: id,
+        ...payload,
+      });
+      setReviews((prev) => [newReview, ...prev]);
+    } catch (error) {
+      console.error("Failed to add review:", error);
+    }
   };
 
-  const instructorOtherCourses = ALL_COURSES.filter(
-    (c) => c.instructor.id === course?.instructor.id && c.id !== course?.id
-  ).slice(0, 3);
-  const related = ALL_COURSES.filter(
-    (c) => c.category.id === course?.category.id && c.id !== course?.id
-  ).slice(0, 4);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!course) {
     return (
@@ -91,7 +150,7 @@ export default function CourseDetailPage() {
             </div>
             <div className="md:col-span-4 col-span-1 hidden md:block">
               <div className="sticky md:top-20 top-4">
-                <div className="absolute p-4 md:border-2 bg-white rounded-lg">
+                <div className="absolute p-4 md:border-2 bg-white rounded-lg z-20">
                   <div>
                     <img
                       src={course.thumbnail}
@@ -148,23 +207,22 @@ export default function CourseDetailPage() {
           </div>
           <Reviews reviews={reviews} onAdd={handleAddReview} />
         </div>
-        <aside className="md:col-span-4 col-span-1">
+        {/* <aside className="md:col-span-4 col-span-1">
           <div className="sticky md:top-24 top-4 space-y-6">
-            {/* <InstructorBlock instructor={course.instructor} /> */}
-            {instructorOtherCourses.length > 0 && (
+            {instructorCourses.length > 0 && (
               <RelatedCourses
-                courses={instructorOtherCourses}
+                courses={instructorCourses}
                 title={t("course.moreFromInstructor")}
               />
             )}
-            {related.length > 0 && (
+            {relatedCourses.length > 0 && (
               <RelatedCourses
-                courses={related}
+                courses={relatedCourses}
                 title={t("course.relatedCourses")}
               />
             )}
           </div>
-        </aside>
+        </aside> */}
       </div>
     </div>
   );

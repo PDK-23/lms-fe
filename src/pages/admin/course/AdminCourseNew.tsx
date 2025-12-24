@@ -1,25 +1,36 @@
 import { Card, Button, Input } from "@/components/ui";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { MOCK_INSTRUCTORS } from "@/mocks/instructors";
-import { ALL_COURSES } from "@/mocks/courses";
-import type { Course } from "@/types";
-import categoryService from "@/services/categoryService";
-import specializationService from "@/services/specializationService";
+import type { Course, Category, Specialization, Instructor } from "@/types";
+import * as categoryService from "@/services/categoryService";
+import * as specializationService from "@/services/specializationService";
+import * as courseService from "@/services/courseService";
+
+// Default instructor for new courses
+const defaultInstructor: Instructor = {
+  id: "1",
+  name: "To be assigned",
+  avatar: "",
+  bio: "",
+  rating: 0,
+  totalRatings: 0,
+  students: 0,
+};
 
 export default function AdminCourseNew() {
   const navigate = useNavigate();
 
-  const categories = categoryService.getCategories();
-  const specializations = specializationService.getSpecializations();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState<Course>({
     id: "",
     title: "",
     description: "",
-    category: categories[0] || ({} as any),
-    categoryId: categories[0]?.id,
-    instructor: MOCK_INSTRUCTORS[0],
+    category: {} as Category,
+    categoryId: "",
+    instructor: defaultInstructor,
     price: 0,
     originalPrice: 0,
     rating: 0,
@@ -29,7 +40,7 @@ export default function AdminCourseNew() {
     duration: 0,
     level: "Beginner",
     tags: [],
-    specializationId: specializations[0]?.id,
+    specializationId: "",
     isBestseller: false,
     isTrending: false,
     isNew: false,
@@ -38,6 +49,39 @@ export default function AdminCourseNew() {
   const [tagInput, setTagInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [cats, specs] = await Promise.all([
+        categoryService.getCategories(),
+        specializationService.getSpecializations(),
+      ]);
+      setCategories(cats);
+      setSpecializations(specs);
+      if (cats.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          category: cats[0],
+          categoryId: cats[0].id,
+        }));
+      }
+      if (specs.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          specializationId: specs[0].id,
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -78,10 +122,10 @@ export default function AdminCourseNew() {
     }));
   };
 
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = categoryService
-      .getCategories()
-      .find((c) => c.id === e.target.value);
+  const handleCategoryChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const selected = categories.find((c) => c.id === e.target.value);
     if (selected)
       setFormData((prev) => ({
         ...prev,
@@ -90,25 +134,20 @@ export default function AdminCourseNew() {
       }));
   };
 
-  const handleInstructorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = MOCK_INSTRUCTORS.find((i) => i.id === e.target.value);
-    if (selected) setFormData((prev) => ({ ...prev, instructor: selected }));
-  };
+  // Instructor selection removed - backend handles instructors differently
+  // Using defaultInstructor for all new courses
 
   const handleCreate = async () => {
     if (!formData.title.trim()) return;
     setIsCreating(true);
 
     const selectedCategory =
-      categoryService
-        .getCategories()
-        .find((c) => c.id === formData.category.id) ||
-      categoryService.getCategories()[0] ||
-      ({} as any);
+      categories.find((c) => c.id === formData.category.id) ||
+      categories[0] ||
+      ({} as Category);
 
-    const newCourse: Course = {
+    const newCourse: Omit<Course, "id"> = {
       ...formData,
-      id: Date.now().toString(),
       rating: 0,
       totalRatings: 0,
       students: 0,
@@ -116,18 +155,27 @@ export default function AdminCourseNew() {
       categoryId: selectedCategory.id,
     };
 
-    // Simulate API and add to mock list so it appears in AdminCourses
-    await new Promise((r) => setTimeout(r, 500));
-    ALL_COURSES.push(newCourse);
-
-    setSuccessMessage("Course created successfully!");
-    setIsCreating(false);
-
-    setTimeout(() => {
-      setSuccessMessage("");
-      navigate("/admin/courses");
-    }, 800);
+    try {
+      await courseService.createCourse(newCourse);
+      setSuccessMessage("Course created successfully!");
+      setTimeout(() => {
+        setSuccessMessage("");
+        navigate("/admin/courses");
+      }, 800);
+    } catch (error) {
+      console.error("Failed to create course:", error);
+    } finally {
+      setIsCreating(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -285,17 +333,12 @@ export default function AdminCourseNew() {
             <label className="block text-sm font-medium text-neutral-700 mb-2">
               Instructor
             </label>
-            <select
-              value={formData.instructor.id}
-              onChange={handleInstructorChange}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              {MOCK_INSTRUCTORS.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.name}
-                </option>
-              ))}
-            </select>
+            <Input
+              value={formData.instructor.name}
+              disabled
+              placeholder="Instructor will be assigned"
+              className="bg-neutral-100"
+            />
           </div>
         </div>
 

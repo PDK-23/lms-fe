@@ -1,46 +1,80 @@
 import { Card, Button, Input } from "@/components/ui";
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
-import { ALL_COURSES } from "@/mocks/courses";
-import { MOCK_INSTRUCTORS } from "@/mocks/instructors";
-import categoryService from "@/services/categoryService";
-import specializationService from "@/services/specializationService";
-import type { Course } from "@/types";
+import * as categoryService from "@/services/categoryService";
+import * as specializationService from "@/services/specializationService";
+import * as courseService from "@/services/courseService";
+import type { Course, Category, Specialization, Instructor } from "@/types";
+
+// Default instructor for courses
+const defaultInstructor: Instructor = {
+  id: "1",
+  name: "To be assigned",
+  avatar: "",
+  bio: "",
+  rating: 0,
+  totalRatings: 0,
+  students: 0,
+};
 
 export default function AdminCourseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // Find the course
-  const course = useMemo(() => ALL_COURSES.find((c) => c.id === id), [id]);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
 
-  const [formData, setFormData] = useState<Course>(
-    course || {
-      id: "",
-      title: "",
-      description: "",
-      category: categoryService.getCategories()[0] || ({} as any),
-      categoryId: categoryService.getCategories()[0]?.id,
-      instructor: MOCK_INSTRUCTORS[0],
-      price: 0,
-      originalPrice: 0,
-      rating: 0,
-      totalRatings: 0,
-      students: 0,
-      thumbnail: "",
-      duration: 0,
-      level: "Beginner",
-      tags: [],
-      isBestseller: false,
-      isTrending: false,
-      isNew: false,
-    }
-  );
+  const [formData, setFormData] = useState<Course>({
+    id: "",
+    title: "",
+    description: "",
+    category: {} as Category,
+    categoryId: "",
+    instructor: defaultInstructor,
+    price: 0,
+    originalPrice: 0,
+    rating: 0,
+    totalRatings: 0,
+    students: 0,
+    thumbnail: "",
+    duration: 0,
+    level: "Beginner",
+    tags: [],
+    isBestseller: false,
+    isTrending: false,
+    isNew: false,
+  });
 
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [tagInput, setTagInput] = useState("");
+
+  const fetchData = useCallback(async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const [course, cats, specs] = await Promise.all([
+        courseService.getCourseById(id),
+        categoryService.getCategories(),
+        specializationService.getSpecializations(),
+      ]);
+      setCategories(cats);
+      setSpecializations(specs);
+      if (course) {
+        setFormData(course);
+      }
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -82,9 +116,7 @@ export default function AdminCourseDetail() {
   };
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedCategory = categoryService
-      .getCategories()
-      .find((c) => c.id === e.target.value);
+    const selectedCategory = categories.find((c) => c.id === e.target.value);
     if (selectedCategory) {
       setFormData((prev) => ({
         ...prev,
@@ -94,43 +126,40 @@ export default function AdminCourseDetail() {
     }
   };
 
-  const handleInstructorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedInstructor = MOCK_INSTRUCTORS.find(
-      (i) => i.id === e.target.value
-    );
-    if (selectedInstructor) {
-      setFormData((prev) => ({
-        ...prev,
-        instructor: selectedInstructor,
-      }));
-    }
-  };
+  // Instructor selection removed - backend handles instructors differently
+  // Instructor is loaded from the course data
 
   const handleSave = async () => {
     setIsSaving(true);
     // Ensure categoryId set
-    const selectedCategory = categoryService
-      .getCategories()
-      .find((c) => c.id === formData.category.id);
+    const selectedCategory = categories.find(
+      (c) => c.id === formData.category.id
+    );
     if (selectedCategory) {
       formData.categoryId = selectedCategory.id;
       formData.category = selectedCategory;
     }
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Persist to mock list
-    const i = ALL_COURSES.findIndex((c) => c.id === formData.id);
-    if (i >= 0) {
-      ALL_COURSES[i] = { ...formData } as Course;
+    try {
+      await courseService.updateCourse(formData.id, formData);
+      setSuccessMessage("Course updated successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (error) {
+      console.error("Failed to update course:", error);
+    } finally {
+      setIsSaving(false);
     }
-
-    setSuccessMessage("Course updated successfully!");
-    setIsSaving(false);
-    setTimeout(() => setSuccessMessage(""), 3000);
   };
 
-  if (!course) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!formData.id) {
     return (
       <div className="space-y-4">
         <button
@@ -245,7 +274,7 @@ export default function AdminCourseDetail() {
                 onChange={handleCategoryChange}
                 className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                {categoryService.getCategories().map((cat) => (
+                {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
                   </option>
@@ -285,7 +314,7 @@ export default function AdminCourseDetail() {
                 className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">None</option>
-                {specializationService.getSpecializations().map((s) => (
+                {specializations.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -355,17 +384,11 @@ export default function AdminCourseDetail() {
               <label className="block text-sm font-medium text-neutral-700 mb-2">
                 Instructor
               </label>
-              <select
-                value={formData.instructor.id}
-                onChange={handleInstructorChange}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                {MOCK_INSTRUCTORS.map((instructor) => (
-                  <option key={instructor.id} value={instructor.id}>
-                    {instructor.name}
-                  </option>
-                ))}
-              </select>
+              <Input
+                value={formData.instructor?.name || "No instructor assigned"}
+                disabled
+                className="bg-neutral-100"
+              />
             </div>
           </div>
 

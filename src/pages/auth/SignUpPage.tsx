@@ -8,14 +8,15 @@ import { Button } from "@/components/ui";
 import { Input } from "@/components/ui";
 import { Card } from "@/components/ui";
 import { User, Mail, Lock, Eye, EyeOff, Check } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SignUpPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { signup, isLoading } = useAuth();
 
   const signupSchema = z
     .object({
@@ -69,27 +70,22 @@ export default function SignUpPage() {
   ];
 
   const onSubmit = async (data: SignUpFormData) => {
-    setIsLoading(true);
     setError(null);
 
     try {
-      // Demo: Đăng ký thành công sau 1 giây
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Lưu token (nếu có)
-      localStorage.setItem("token", "demo-token-" + Date.now());
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ name: data.name, email: data.email })
-      );
-
+      await signup(data);
       navigate("/");
       reset();
     } catch (err) {
-      setError(t("auth.signup.errors.signupFailed"));
+      if (err instanceof Error) {
+        const errorMessage = err.message.includes("already registered")
+          ? t("auth.signup.errors.emailExists")
+          : t("auth.signup.errors.signupFailed");
+        setError(errorMessage);
+      } else {
+        setError(t("auth.signup.errors.signupFailed"));
+      }
       console.error("Sign up error:", err);
-    } finally {
-      setIsLoading(false);
     }
   };
 

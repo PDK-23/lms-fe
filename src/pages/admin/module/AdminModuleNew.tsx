@@ -1,5 +1,5 @@
 import { Card, Button, Input } from "@/components/ui";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import moduleService from "@/services/moduleService";
@@ -15,29 +15,57 @@ export default function AdminModuleNew() {
   const [moduleGroups, setModuleGroups] = useState<
     Array<{ id: string; name: string }>
   >([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setModuleGroups(moduleGroupService.getAll());
+  const fetchModuleGroups = useCallback(async () => {
+    try {
+      setLoading(true);
+      const groups = await moduleGroupService.getAll();
+      setModuleGroups(groups);
+    } catch (error) {
+      console.error("Failed to fetch module groups:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchModuleGroups();
+  }, [fetchModuleGroups]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !url.trim() || !moduleGroupId) {
       alert("Please fill in all required fields");
       return;
     }
 
-    moduleService.add({
-      name: name.trim(),
-      url: url.trim(),
-      icon: icon.trim() || undefined,
-      description: description.trim() || undefined,
-      moduleGroupId,
-      createdById: "user1", // TODO: Use actual logged-in user
-    });
-
-    navigate("/admin/modules");
+    try {
+      setSaving(true);
+      await moduleService.add({
+        name: name.trim(),
+        url: url.trim(),
+        icon: icon.trim() || undefined,
+        description: description.trim() || undefined,
+        moduleGroupId,
+        createdById: "user1", // TODO: Use actual logged-in user
+      });
+      navigate("/admin/modules");
+    } catch (error) {
+      console.error("Failed to create module:", error);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -129,7 +157,9 @@ export default function AdminModuleNew() {
             >
               Cancel
             </Button>
-            <Button type="submit">Create Module</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating..." : "Create Module"}
+            </Button>
           </div>
         </form>
       </Card>

@@ -1,15 +1,52 @@
 import { Card, Button } from "@/components/ui";
-import { useState } from "react";
-import { ALL_COURSES } from "@/mocks/courses";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Edit2, Trash2 } from "lucide-react";
+import * as courseService from "@/services/courseService";
 import type { Course } from "@/types";
 
 export default function AdminCourses() {
   const navigate = useNavigate();
-  const [courses, setCourses] = useState<Course[]>(ALL_COURSES);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
+
+  const fetchCourses = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await courseService.getCourses();
+      setCourses(result);
+    } catch (error) {
+      console.error("Failed to fetch courses:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
+
+  const handleDelete = async (course: Course) => {
+    try {
+      await courseService.deleteCourse(course.id);
+      fetchCourses();
+    } catch (error) {
+      console.error("Failed to delete course:", error);
+    } finally {
+      setConfirmOpen(false);
+      setCourseToDelete(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -164,13 +201,7 @@ export default function AdminCourses() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  setCourses((prev) =>
-                    prev.filter((x) => x.id !== courseToDelete.id)
-                  );
-                  setConfirmOpen(false);
-                  setCourseToDelete(null);
-                }}
+                onClick={() => handleDelete(courseToDelete)}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete

@@ -1,10 +1,41 @@
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui";
 import { useParams } from "react-router-dom";
 import categoryService from "@/services/categoryService";
+import type { Category } from "@/types";
 
 export default function AdminCategoryView() {
   const { id } = useParams();
-  const cat = id ? categoryService.getCategoryById(id) : undefined;
+  const [cat, setCat] = useState<Category | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const result = await categoryService.getCategoryById(id);
+      setCat(result || null);
+    } catch (error) {
+      console.error("Failed to fetch category:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!cat) return <div>Category not found</div>;
 

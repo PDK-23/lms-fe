@@ -1,25 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Input, Card } from "@/components/ui";
 import { Plus } from "lucide-react";
 import quizService from "@/services/quizService";
-import { ALL_COURSES } from "@/mocks/courses";
-import type { Quiz, QuizQuestion } from "@/types";
+import courseService from "@/services/courseService";
+import type { Quiz, QuizQuestion, Course } from "@/types";
 
 export default function AdminQuizDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const q = id ? quizService.getQuizById(id) : undefined;
-
-  const [title, setTitle] = useState(q?.title || "");
-  const [courseId, setCourseId] = useState(q?.courseId || "");
-  const [passingScore, setPassingScore] = useState(q?.passingScore || 70);
-  const [duration, setDuration] = useState(q?.duration || 15);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [q, setQ] = useState<Quiz | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [title, setTitle] = useState("");
+  const [courseId, setCourseId] = useState("");
+  const [passingScore, setPassingScore] = useState(70);
+  const [duration, setDuration] = useState(15);
 
   // Questions state
-  const [questions, setQuestions] = useState<QuizQuestion[]>(
-    q?.questions || []
-  );
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [questionEditorOpen, setQuestionEditorOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(
     null
@@ -28,19 +28,65 @@ export default function AdminQuizDetail() {
     string | null
   >(null);
 
+  const fetchData = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const [quiz, coursesData] = await Promise.all([
+        quizService.getQuizById(id),
+        courseService.getCourses(),
+      ]);
+      setCourses(coursesData);
+      if (quiz) {
+        setQ(quiz);
+        setTitle(quiz.title || "");
+        setCourseId(quiz.courseId || "");
+        setPassingScore(quiz.passingScore || 70);
+        setDuration(quiz.duration || 15);
+        setQuestions(quiz.questions || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch quiz:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   if (!q) return <div>Quiz not found</div>;
 
-  function save() {
-    const updated: Quiz = {
-      id: String(q!.id),
-      title,
-      courseId,
-      passingScore,
-      duration,
-      questions: q!.questions,
-    };
-    quizService.updateQuiz(updated);
-    navigate("/admin/quizzes");
+  async function save() {
+    try {
+      setSaving(true);
+      const updated: Quiz = {
+        id: String(q!.id),
+        title,
+        courseId,
+        passingScore,
+        duration,
+        questions: q!.questions,
+      };
+      await quizService.updateQuiz(updated.id, updated);
+      navigate("/admin/quizzes");
+    } catch (error) {
+      console.error("Failed to update quiz:", error);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -61,7 +107,7 @@ export default function AdminQuizDetail() {
               onChange={(e) => setCourseId(e.target.value)}
             >
               <option value="">None</option>
-              {ALL_COURSES.map((c) => (
+              {courses.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.title}
                 </option>
@@ -92,7 +138,9 @@ export default function AdminQuizDetail() {
             <Button variant="outline" onClick={() => navigate(-1)}>
               Cancel
             </Button>
-            <Button onClick={save}>Save</Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </div>
         </div>
       </Card>
@@ -170,7 +218,7 @@ export default function AdminQuizDetail() {
             const idx = copy.questions.findIndex((x) => x.id === qq.id);
             if (idx >= 0) copy.questions[idx] = qq;
             else copy.questions.push(qq);
-            quizService.updateQuiz(copy);
+            quizService.updateQuiz(copy.id, copy);
             setQuestions(copy.questions);
             setQuestionEditorOpen(false);
           }}
@@ -202,7 +250,7 @@ export default function AdminQuizDetail() {
                   copy.questions = (copy.questions || []).filter(
                     (x) => x.id !== confirmDeleteQuestion
                   );
-                  quizService.updateQuiz(copy);
+                  quizService.updateQuiz(copy.id, copy);
                   setQuestions(copy.questions);
                   setConfirmDeleteQuestion(null);
                 }}

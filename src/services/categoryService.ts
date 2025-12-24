@@ -1,58 +1,109 @@
-import { CATEGORIES as SEED } from "@/mocks/categories";
+import { get, post, put, del, type PageResponse } from "@/lib/api";
 import type { Category } from "@/types";
 
-const STORAGE_KEY = "mock_categories_v1";
+// Backend Category entity mapping
+interface CategoryDTO {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  parentId?: number;
+  isActive: boolean;
+  sortOrder: number;
+  courseCount?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
 
-function load(): Category[] {
+// Transform backend DTO to frontend type
+function toCategory(dto: CategoryDTO): Category {
+  return {
+    id: String(dto.id),
+    name: dto.name,
+    icon: dto.icon || "📚",
+    color: dto.color || "#3B82F6",
+    courseCount: dto.courseCount || 0,
+    parentId: dto.parentId ? String(dto.parentId) : undefined,
+  };
+}
+
+// Transform frontend type to backend DTO
+function toCategoryDTO(category: Partial<Category>): Partial<CategoryDTO> {
+  return {
+    name: category.name,
+    icon: category.icon,
+    color: category.color,
+    parentId: category.parentId ? Number(category.parentId) : undefined,
+  };
+}
+
+export async function getCategories(): Promise<Category[]> {
+  const data = await get<CategoryDTO[]>("/categories/root");
+  return data?.map(toCategory) || [];
+}
+
+export async function getCategoriesPaginated(
+  page = 0,
+  size = 10
+): Promise<PageResponse<Category>> {
+  const response = await get<PageResponse<CategoryDTO>>("/categories", {
+    page,
+    size,
+  });
+  return {
+    ...response,
+    content: response.content.map(toCategory),
+  };
+}
+
+export async function getCategoryById(id: string): Promise<Category | null> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Category[];
-  } catch (e) {
-    console.warn("Failed to read categories from localStorage", e);
+    const data = await get<CategoryDTO>(`/categories/${id}`);
+    return toCategory(data);
+  } catch {
+    return null;
   }
-  // deep clone
-  return JSON.parse(JSON.stringify(SEED)) as Category[];
 }
 
-function save(categories: Category[]) {
+export async function getCategoryBySlug(
+  slug: string
+): Promise<Category | null> {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
-  } catch (e) {
-    console.warn("Failed to write categories to localStorage", e);
+    const data = await get<CategoryDTO>(`/categories/slug/${slug}`);
+    return toCategory(data);
+  } catch {
+    return null;
   }
 }
 
-let categories = load();
-
-export function getCategories(): Category[] {
-  return categories;
+export async function addCategory(
+  category: Omit<Category, "id" | "courseCount">
+): Promise<Category> {
+  const dto = toCategoryDTO(category);
+  const data = await post<CategoryDTO>("/categories", dto);
+  return toCategory(data);
 }
 
-export function getCategoryById(id: string): Category | undefined {
-  return categories.find((c) => c.id === id);
+export async function updateCategory(
+  id: string,
+  category: Partial<Category>
+): Promise<Category> {
+  const dto = toCategoryDTO(category);
+  const data = await put<CategoryDTO>(`/categories/${id}`, dto);
+  return toCategory(data);
 }
 
-export function addCategory(cat: Category) {
-  categories.push(JSON.parse(JSON.stringify(cat)));
-  save(categories);
-}
-
-export function updateCategory(updated: Category) {
-  const i = categories.findIndex((c) => c.id === updated.id);
-  if (i >= 0) {
-    categories[i] = JSON.parse(JSON.stringify(updated));
-    save(categories);
-  }
-}
-
-export function deleteCategory(id: string) {
-  categories = categories.filter((c) => c.id !== id);
-  save(categories);
+export async function deleteCategory(id: string): Promise<void> {
+  await del(`/categories/${id}`);
 }
 
 export default {
   getCategories,
+  getCategoriesPaginated,
   getCategoryById,
+  getCategoryBySlug,
   addCategory,
   updateCategory,
   deleteCategory,

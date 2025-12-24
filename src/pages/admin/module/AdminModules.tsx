@@ -1,5 +1,5 @@
 import { Card, Button } from "@/components/ui";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Edit2, Trash2, Eye, Link } from "lucide-react";
 import type { Module } from "@/types";
@@ -10,29 +10,53 @@ export default function AdminModules() {
   const navigate = useNavigate();
   const [modules, setModules] = useState<Module[]>([]);
   const [groupNames, setGroupNames] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [moduleToDelete, setModuleToDelete] = useState<Module | null>(null);
 
-  useEffect(() => {
-    setModules(moduleService.getAll());
-    // Load group names for display
-    const groups = moduleGroupService.getAll();
-    const names: Record<string, string> = {};
-    groups.forEach((g) => {
-      names[g.id] = g.name;
-    });
-    setGroupNames(names);
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [modulesData, groups] = await Promise.all([
+        moduleService.getAll(),
+        moduleGroupService.getAll(),
+      ]);
+      setModules(modulesData);
+      const names: Record<string, string> = {};
+      groups.forEach((g) => {
+        names[g.id] = g.name;
+      });
+      setGroupNames(names);
+    } catch (error) {
+      console.error("Failed to fetch modules:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleDelete = () => {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleDelete = async () => {
     if (!moduleToDelete) return;
-    const success = moduleService.remove(moduleToDelete.id);
-    if (success) {
-      setModules((prev) => prev.filter((m) => m.id !== moduleToDelete.id));
+    try {
+      await moduleService.remove(moduleToDelete.id);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete module:", error);
     }
     setConfirmOpen(false);
     setModuleToDelete(null);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

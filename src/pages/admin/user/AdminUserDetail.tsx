@@ -1,5 +1,5 @@
 import { Card, Button, Input } from "@/components/ui";
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import userService from "@/services/userService";
 import type { User } from "@/types";
@@ -7,24 +7,41 @@ import type { User } from "@/types";
 export default function AdminUserDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const user = useMemo(
-    () => (id ? userService.getUserById(id) : undefined),
-    [id]
-  );
-
-  const [form, setForm] = useState<User>(
-    user ||
-      ({
-        id: "",
-        email: "",
-        name: "",
-        enrolledCourses: [],
-        completedCourses: [],
-        certificates: [],
-        createdAt: new Date(),
-      } as any)
-  );
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState<User>({
+    id: "",
+    email: "",
+    name: "",
+    enrolledCourses: [],
+    completedCourses: [],
+    certificates: [],
+    createdAt: new Date(),
+  } as any);
   const [isSaving, setIsSaving] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const result = await userService.getUserById(id);
+      if (result) {
+        setUser(result);
+        setForm(result);
+      }
+    } catch (error) {
+      console.error("Failed to fetch user:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -32,12 +49,24 @@ export default function AdminUserDetail() {
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    await new Promise((r) => setTimeout(r, 300));
-    userService.updateUser(form as any);
-    setIsSaving(false);
-    navigate("/admin/users");
+    try {
+      setIsSaving(true);
+      await userService.updateUser(id!, form as any);
+      navigate("/admin/users");
+    } catch (error) {
+      console.error("Failed to update user:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

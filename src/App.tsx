@@ -69,8 +69,8 @@ function App() {
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:id" element={<CourseDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
-          <Route path="/chat" element={<ChatPage />} />
         </Route>
+        <Route path="/chat" element={<ChatPage />} />
         <Route path="/courses/:id/learn/*" element={<LessonPage />} />
         <Route
           path="/courses/:id/learn/lesson/:lessonId/quiz"

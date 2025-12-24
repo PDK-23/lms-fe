@@ -8,13 +8,14 @@ import { Button } from "@/components/ui";
 import { Input } from "@/components/ui";
 import { Card } from "@/components/ui";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { login, isLoading } = useAuth();
 
   const loginSchema = z.object({
     email: z.string().email(t("auth.login.errors.emailInvalid")),
@@ -33,24 +34,23 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
     setError(null);
 
     try {
-      // Demo: Đăng nhập thành công sau 1 giây
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Lưu token (nếu có)
-      localStorage.setItem("token", "demo-token-" + Date.now());
-      localStorage.setItem("user", JSON.stringify({ email: data.email }));
-
+      await login(data);
       navigate("/");
       reset();
     } catch (err) {
-      setError(t("auth.login.errors.loginFailed"));
+      if (err instanceof Error) {
+        // Extract error message from API response
+        const errorMessage = err.message.includes("Invalid")
+          ? t("auth.login.errors.invalidCredentials")
+          : t("auth.login.errors.loginFailed");
+        setError(errorMessage);
+      } else {
+        setError(t("auth.login.errors.loginFailed"));
+      }
       console.error("Login error:", err);
-    } finally {
-      setIsLoading(false);
     }
   };
 

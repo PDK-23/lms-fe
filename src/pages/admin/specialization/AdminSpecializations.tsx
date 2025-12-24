@@ -1,5 +1,5 @@
 import { Card, Button } from "@/components/ui";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Eye, Edit2, Trash2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import specializationService from "@/services/specializationService";
@@ -7,13 +7,42 @@ import type { Specialization } from "@/types";
 
 export default function AdminSpecializations() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<Specialization[]>(
-    specializationService.getSpecializations()
-  );
+  const [items, setItems] = useState<Specialization[]>([]);
+  const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  function refresh() {
-    setItems(specializationService.getSpecializations());
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await specializationService.getSpecializations();
+      setItems(result);
+    } catch (error) {
+      console.error("Failed to fetch specializations:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await specializationService.deleteSpecialization(id);
+      setConfirmDelete(null);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete specialization:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
@@ -106,11 +135,7 @@ export default function AdminSpecializations() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  specializationService.deleteSpecialization(confirmDelete);
-                  setConfirmDelete(null);
-                  refresh();
-                }}
+                onClick={() => handleDelete(confirmDelete)}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete

@@ -1,19 +1,22 @@
 import { Card, Button, Input } from "@/components/ui";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Edit2, Trash2, Plus, Eye } from "lucide-react";
-import courseService from "@/services/courseService";
-import quizService from "@/services/quizService";
-import practiceService from "@/services/practiceService";
+import * as courseService from "@/services/courseService";
+import * as quizService from "@/services/quizService";
+import * as practiceService from "@/services/practiceService";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
-import type { Course, Section, Lesson } from "@/types";
+import type { Course, Section, Lesson, Quiz, Practice } from "@/types";
 
 export default function AdminCourseView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [courseData, setCourseData] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [practices, setPractices] = useState<Practice[]>([]);
   const [sectionEditorOpen, setSectionEditorOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [confirmDeleteSection, setConfirmDeleteSection] =
@@ -29,24 +32,43 @@ export default function AdminCourseView() {
     lessonId: string;
   } | null>(null);
 
-  useEffect(() => {
+  const fetchCourse = useCallback(async () => {
     if (!id) return;
-    const c = courseService.getCourseById(id);
-    setCourseData(c || null);
+    try {
+      setLoading(true);
+      const c = await courseService.getCourseById(id);
+      setCourseData(c);
+    } catch (error) {
+      console.error("Failed to fetch course:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  function refresh() {
-    if (!id) return;
-    const c = courseService.getCourseById(id);
-    setCourseData(c || null);
-  }
+  const fetchRelatedData = useCallback(async () => {
+    try {
+      const [quizzesData, practicesData] = await Promise.all([
+        quizService.getQuizzes(),
+        practiceService.getPractices(),
+      ]);
+      setQuizzes(quizzesData);
+      setPractices(practicesData);
+    } catch (error) {
+      console.error("Failed to fetch related data:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCourse();
+    fetchRelatedData();
+  }, [fetchCourse, fetchRelatedData]);
 
   const ensureSections = () => {
     if (!courseData) return [] as Section[];
     return courseData.sections || [];
   };
 
-  function onDragEnd(result: DropResult) {
+  async function onDragEnd(result: DropResult) {
     if (!result.destination || !courseData) return;
 
     const { source, destination, type } = result;
@@ -56,8 +78,12 @@ export default function AdminCourseView() {
       const moved = Array.from(sections);
       const [removed] = moved.splice(source.index, 1);
       moved.splice(destination.index, 0, removed);
-      courseService.reorderSections(courseData.id, moved);
-      refresh();
+      try {
+        await courseService.reorderSections(courseData.id, moved.map(s => s.id));
+        fetchCourse();
+      } catch (error) {
+        console.error("Failed to reorder sections:", error);
+      }
       return;
     }
 
@@ -69,25 +95,37 @@ export default function AdminCourseView() {
       const toSection = ensureSections().find((s) => s.id === toSectionId);
       if (!fromSection || !toSection) return;
 
-      // moving within same section
-      if (fromSectionId === toSectionId) {
-        const moved = Array.from(fromSection.lessons);
-        const [removed] = moved.splice(source.index, 1);
-        moved.splice(destination.index, 0, removed);
-        courseService.reorderLessons(courseData.id, fromSectionId, moved);
-        refresh();
-        return;
-      }
+      try {
+        // moving within same section
+        if (fromSectionId === toSectionId) {
+          const moved = Array.from(fromSection.lessons);
+          const [removed] = moved.splice(source.index, 1);
+          moved.splice(destination.index, 0, removed);
+          await courseService.reorderLessons(courseData.id, fromSectionId, moved.map(l => l.id));
+          fetchCourse();
+          return;
+        }
 
-      // moving across sections
-      const fromLessons = Array.from(fromSection.lessons);
-      const [removed] = fromLessons.splice(source.index, 1);
-      const toLessons = Array.from(toSection.lessons);
-      toLessons.splice(destination.index, 0, removed);
-      courseService.reorderLessons(courseData.id, fromSectionId, fromLessons);
-      courseService.reorderLessons(courseData.id, toSectionId, toLessons);
-      refresh();
+        // moving across sections
+        const fromLessons = Array.from(fromSection.lessons);
+        const [removed] = fromLessons.splice(source.index, 1);
+        const toLessons = Array.from(toSection.lessons);
+        toLessons.splice(destination.index, 0, removed);
+        await courseService.reorderLessons(courseData.id, fromSectionId, fromLessons.map(l => l.id));
+        await courseService.reorderLessons(courseData.id, toSectionId, toLessons.map(l => l.id));
+        fetchCourse();
+      } catch (error) {
+        console.error("Failed to reorder lessons:", error);
+      }
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   if (!courseData) {
@@ -397,20 +435,24 @@ export default function AdminCourseView() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
+                onClick={async () => {
                   if (!courseData) return;
                   const sec = editingSection || {
                     id: Date.now().toString(),
                     title: "",
                     lessons: [],
                   };
-                  if (courseData.sections?.some((s) => s.id === sec.id)) {
-                    courseService.updateSection(courseData.id, sec);
-                  } else {
-                    courseService.addSection(courseData.id, sec);
+                  try {
+                    if (courseData.sections?.some((s) => s.id === sec.id)) {
+                      await courseService.updateSection(courseData.id, sec.id, sec);
+                    } else {
+                      await courseService.addSection(courseData.id, sec);
+                    }
+                    setSectionEditorOpen(false);
+                    fetchCourse();
+                  } catch (error) {
+                    console.error("Failed to save section:", error);
                   }
-                  setSectionEditorOpen(false);
-                  refresh();
                 }}
               >
                 Save
@@ -541,7 +583,7 @@ export default function AdminCourseView() {
                       className="flex-1 px-3 py-2 border rounded"
                     >
                       <option value="">Select a quiz</option>
-                      {quizService.getQuizzes().map((q) => (
+                      {quizzes.map((q) => (
                         <option key={q.id} value={q.id}>
                           {q.title}
                         </option>
@@ -582,7 +624,7 @@ export default function AdminCourseView() {
                       className="flex-1 px-3 py-2 border rounded"
                     >
                       <option value="">Select a practice</option>
-                      {practiceService.getPractices().map((p) => (
+                      {practices.map((p) => (
                         <option key={p.id} value={p.slug}>
                           {p.title} ({p.slug})
                         </option>
@@ -628,7 +670,7 @@ export default function AdminCourseView() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
+                onClick={async () => {
                   if (!courseData || !lessonParentSection) return;
                   const l = editingLesson || {
                     id: Date.now().toString(),
@@ -639,25 +681,30 @@ export default function AdminCourseView() {
                   // ensure type present
                   if (!(l as any).type) (l as any).type = "video";
 
-                  if (
-                    courseData.sections
-                      ?.find((s) => s.id === lessonParentSection)
-                      ?.lessons.some((x) => x.id === l.id)
-                  ) {
-                    courseService.updateLesson(
-                      courseData.id,
-                      lessonParentSection,
-                      l
-                    );
-                  } else {
-                    courseService.addLesson(
-                      courseData.id,
-                      lessonParentSection,
-                      l
-                    );
+                  try {
+                    if (
+                      courseData.sections
+                        ?.find((s) => s.id === lessonParentSection)
+                        ?.lessons.some((x) => x.id === l.id)
+                    ) {
+                      await courseService.updateLesson(
+                        courseData.id,
+                        lessonParentSection,
+                        l.id,
+                        l
+                      );
+                    } else {
+                      await courseService.addLesson(
+                        courseData.id,
+                        lessonParentSection,
+                        l
+                      );
+                    }
+                    setLessonEditorOpen(false);
+                    fetchCourse();
+                  } catch (error) {
+                    console.error("Failed to save lesson:", error);
                   }
-                  setLessonEditorOpen(false);
-                  refresh();
                 }}
               >
                 Save
@@ -688,14 +735,18 @@ export default function AdminCourseView() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
+                onClick={async () => {
                   if (courseData) {
-                    courseService.deleteSection(
-                      courseData.id,
-                      confirmDeleteSection.id
-                    );
-                    setConfirmDeleteSection(null);
-                    refresh();
+                    try {
+                      await courseService.deleteSection(
+                        courseData.id,
+                        confirmDeleteSection.id
+                      );
+                      setConfirmDeleteSection(null);
+                      fetchCourse();
+                    } catch (error) {
+                      console.error("Failed to delete section:", error);
+                    }
                   }
                 }}
                 className="bg-red-600 hover:bg-red-700 text-white"
@@ -727,15 +778,19 @@ export default function AdminCourseView() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
+                onClick={async () => {
                   if (courseData && confirmDeleteLesson) {
-                    courseService.deleteLesson(
-                      courseData.id,
-                      confirmDeleteLesson.sectionId,
-                      confirmDeleteLesson.lessonId
-                    );
-                    setConfirmDeleteLesson(null);
-                    refresh();
+                    try {
+                      await courseService.deleteLesson(
+                        courseData.id,
+                        confirmDeleteLesson.sectionId,
+                        confirmDeleteLesson.lessonId
+                      );
+                      setConfirmDeleteLesson(null);
+                      fetchCourse();
+                    } catch (error) {
+                      console.error("Failed to delete lesson:", error);
+                    }
                   }
                 }}
                 className="bg-red-600 hover:bg-red-700 text-white"

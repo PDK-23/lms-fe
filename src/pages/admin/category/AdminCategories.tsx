@@ -1,5 +1,5 @@
 import { Card, Button, Input } from "@/components/ui";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Eye, Edit2, Trash2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import categoryService from "@/services/categoryService";
@@ -7,19 +7,48 @@ import type { Category } from "@/types";
 
 export default function AdminCategories() {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<Category[]>(
-    categoryService.getCategories()
-  );
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  function refresh() {
-    setCategories(categoryService.getCategories());
-  }
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await categoryService.getCategories();
+      setCategories(data);
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await categoryService.deleteCategory(id);
+      setConfirmDelete(null);
+      fetchCategories();
+    } catch (error) {
+      console.error("Failed to delete category:", error);
+    }
+  };
 
   const filtered = categories.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -62,9 +91,7 @@ export default function AdminCategories() {
                   </td>
                   <td className="py-3 px-2 text-neutral-600">
                     {c.parentId
-                      ? categoryService
-                          .getCategories()
-                          .find((p) => p.id === c.parentId)?.name || "-"
+                      ? categories.find((p) => p.id === c.parentId)?.name || "-"
                       : "-"}
                   </td>
                   <td className="py-3 px-2 text-neutral-600">
@@ -126,11 +153,7 @@ export default function AdminCategories() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  categoryService.deleteCategory(confirmDelete);
-                  setConfirmDelete(null);
-                  refresh();
-                }}
+                onClick={() => handleDelete(confirmDelete)}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete

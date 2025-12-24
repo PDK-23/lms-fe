@@ -5,17 +5,40 @@ import {
   InstructorCard,
   SearchBar,
 } from "@/components/course";
-import { CATEGORIES, MOCK_INSTRUCTORS } from "@/lib/constants";
-import { ALL_COURSES } from "@/mocks/courses";
-import { type Course } from "@/types";
+import { MOCK_INSTRUCTORS } from "@/lib/constants";
+import courseService from "@/services/courseService";
+import categoryService from "@/services/categoryService";
+import { type Course, type Category } from "@/types";
 import { ArrowRight } from "lucide-react";
-import { useState } from "react";
-
-// Use central mock courses and pick featured items
-const FEATURED_COURSES = ALL_COURSES.slice(0, 4);
+import { useState, useEffect, useCallback } from "react";
 
 export function HomePage() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [_searchQuery, setSearchQuery] = useState("");
+  const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [coursesData, categoriesData] = await Promise.all([
+        courseService
+          .getFeaturedCourses()
+          .catch(() => courseService.getCourses()),
+        categoryService.getCategories(),
+      ]);
+      setFeaturedCourses(coursesData.slice(0, 4));
+      setCategories(categoriesData.slice(0, 8));
+    } catch (error) {
+      console.error("Failed to fetch home page data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleEnroll = (courseId: string) => {
     console.log("Enrolling in course:", courseId);
@@ -135,14 +158,20 @@ export function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {FEATURED_COURSES.map((course) => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              onEnroll={handleEnroll}
-              variant="compact"
-            />
-          ))}
+          {loading ? (
+            <div className="col-span-full flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            featuredCourses.map((course) => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                onEnroll={handleEnroll}
+                variant="compact"
+              />
+            ))
+          )}
         </div>
       </section>
 
@@ -156,7 +185,7 @@ export function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-          {CATEGORIES.map((category) => (
+          {categories.map((category) => (
             <CategoryCard key={category.id} category={category} />
           ))}
         </div>

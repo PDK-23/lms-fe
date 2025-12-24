@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Input } from "@/components/ui";
 import categoryService from "@/services/categoryService";
@@ -7,29 +7,75 @@ import type { Category } from "@/types";
 export default function AdminCategoryDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const cat = id ? categoryService.getCategoryById(id) : undefined;
+  const [cat, setCat] = useState<Category | null>(null);
+  const [name, setName] = useState("");
+  const [icon, setIcon] = useState("");
+  const [color, setColor] = useState("primary");
+  const [parentId, setParentId] = useState<string | "">("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [name, setName] = useState(cat?.name || "");
-  const [icon, setIcon] = useState(cat?.icon || "");
-  const [color, setColor] = useState(cat?.color || "primary");
-  const [parentId, setParentId] = useState<string | "">(cat?.parentId || "");
+  const fetchData = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const [category, allCategories] = await Promise.all([
+        categoryService.getCategoryById(id),
+        categoryService.getCategories(),
+      ]);
+      if (category) {
+        setCat(category);
+        setName(category.name || "");
+        setIcon(category.icon || "");
+        setColor(category.color || "primary");
+        setParentId(category.parentId || "");
+      }
+      setCategories(allCategories.filter((c) => c.id !== id));
+    } catch (error) {
+      console.error("Failed to fetch category:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
-  const categories = categoryService.getCategories().filter((c) => c.id !== id);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  async function save() {
+    if (!cat) return;
+    try {
+      setSaving(true);
+      const updated: Category = {
+        id: cat.id,
+        name,
+        icon,
+        color,
+        courseCount: cat.courseCount || 0,
+        parentId: parentId || undefined,
+      };
+      await categoryService.updateCategory(cat.id, updated);
+      navigate("/admin/categories");
+    } catch (error) {
+      console.error("Failed to update category:", error);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!cat) return <div>Category not found</div>;
-
-  function save() {
-    const updated: Category = {
-      id: cat!.id,
-      name,
-      icon,
-      color,
-      courseCount: cat!.courseCount || 0,
-      parentId: parentId || undefined,
-    };
-    categoryService.updateCategory(updated);
-    navigate("/admin/categories");
-  }
 
   return (
     <div className="space-y-4 max-w-lg">
@@ -75,7 +121,9 @@ export default function AdminCategoryDetail() {
           <Button variant="outline" onClick={() => navigate(-1)}>
             Cancel
           </Button>
-          <Button onClick={save}>Save</Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Saving..." : "Save"}
+          </Button>
         </div>
       </div>
     </div>

@@ -1,57 +1,106 @@
-import { TAGS as SEED } from "@/mocks/tags";
+import { get, post, put, del, type PageResponse } from "@/lib/api";
 import type { Tag } from "@/types";
 
-const STORAGE_KEY = "mock_tags_v1";
+// Backend Tag DTO
+interface TagDTO {
+  id: number;
+  name: string;
+  slug: string;
+  color?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
 
-function load(): Tag[] {
+// Transform backend DTO to frontend type
+function toTag(dto: TagDTO): Tag {
+  return {
+    id: String(dto.id),
+    name: dto.name,
+    color: dto.color,
+  };
+}
+
+// Transform frontend type to backend DTO
+function toTagDTO(tag: Partial<Tag>): Partial<TagDTO> {
+  return {
+    name: tag.name,
+    color: tag.color,
+  };
+}
+
+export async function getTags(): Promise<Tag[]> {
+  const data = await get<TagDTO[]>("/tags/all");
+  return data.map(toTag);
+}
+
+export async function getTagsPaginated(
+  page = 0,
+  size = 10
+): Promise<PageResponse<Tag>> {
+  const response = await get<PageResponse<TagDTO>>("/tags", { page, size });
+  return {
+    ...response,
+    content: response.content.map(toTag),
+  };
+}
+
+export async function getTagById(id: string): Promise<Tag | null> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Tag[];
-  } catch (e) {
-    console.warn("Failed to read tags from localStorage", e);
+    const data = await get<TagDTO>(`/tags/${id}`);
+    return toTag(data);
+  } catch {
+    return null;
   }
-  return JSON.parse(JSON.stringify(SEED)) as Tag[];
 }
 
-function save(tags: Tag[]) {
+export async function getTagBySlug(slug: string): Promise<Tag | null> {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tags));
-  } catch (e) {
-    console.warn("Failed to write tags to localStorage", e);
+    const data = await get<TagDTO>(`/tags/slug/${slug}`);
+    return toTag(data);
+  } catch {
+    return null;
   }
 }
 
-let tags = load();
-
-export function getTags(): Tag[] {
-  return tags;
+export async function searchTags(
+  keyword: string,
+  page = 0,
+  size = 10
+): Promise<PageResponse<Tag>> {
+  const response = await get<PageResponse<TagDTO>>("/tags/search", {
+    keyword,
+    page,
+    size,
+  });
+  return {
+    ...response,
+    content: response.content.map(toTag),
+  };
 }
 
-export function getTagById(id: string): Tag | undefined {
-  return tags.find((t) => t.id === id);
+export async function addTag(tag: Omit<Tag, "id">): Promise<Tag> {
+  const dto = toTagDTO(tag);
+  const data = await post<TagDTO>("/tags", dto);
+  return toTag(data);
 }
 
-export function addTag(tag: Tag) {
-  tags.push(JSON.parse(JSON.stringify(tag)));
-  save(tags);
+export async function updateTag(id: string, tag: Partial<Tag>): Promise<Tag> {
+  const dto = toTagDTO(tag);
+  const data = await put<TagDTO>(`/tags/${id}`, dto);
+  return toTag(data);
 }
 
-export function updateTag(updated: Tag) {
-  const i = tags.findIndex((t) => t.id === updated.id);
-  if (i >= 0) {
-    tags[i] = JSON.parse(JSON.stringify(updated));
-    save(tags);
-  }
-}
-
-export function deleteTag(id: string) {
-  tags = tags.filter((t) => t.id !== id);
-  save(tags);
+export async function deleteTag(id: string): Promise<void> {
+  await del(`/tags/${id}`);
 }
 
 export default {
   getTags,
+  getTagsPaginated,
   getTagById,
+  getTagBySlug,
+  searchTags,
   addTag,
   updateTag,
   deleteTag,

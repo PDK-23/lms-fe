@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Input, Card } from "@/components/ui";
 import specializationService from "@/services/specializationService";
@@ -13,11 +13,25 @@ export default function AdminSpecializationNew() {
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    setAvailableCourses(courseService.getCourses());
+  const fetchCourses = useCallback(async () => {
+    try {
+      setLoading(true);
+      const courses = await courseService.getCourses();
+      setAvailableCourses(courses);
+    } catch (error) {
+      console.error("Failed to fetch courses:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -32,15 +46,30 @@ export default function AdminSpecializationNew() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  function save() {
-    const s: Specialization = {
-      id: Date.now().toString(),
-      name: name || "Untitled",
-      description,
-      courseIds: selectedCourseIds,
-    };
-    specializationService.addSpecialization(s);
-    navigate("/admin/specializations");
+  async function save() {
+    try {
+      setSaving(true);
+      const s: Specialization = {
+        id: Date.now().toString(),
+        name: name || "Untitled",
+        description,
+        courseIds: selectedCourseIds,
+      };
+      await specializationService.addSpecialization(s);
+      navigate("/admin/specializations");
+    } catch (error) {
+      console.error("Failed to create specialization:", error);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
@@ -159,7 +188,9 @@ export default function AdminSpecializationNew() {
             <Button variant="outline" onClick={() => navigate(-1)}>
               Cancel
             </Button>
-            <Button onClick={save}>Create</Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Creating..." : "Create"}
+            </Button>
           </div>
         </div>
       </Card>

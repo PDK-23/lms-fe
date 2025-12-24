@@ -1,17 +1,48 @@
 import { Card, Button } from "@/components/ui";
-import { useState } from "react";
-import { Eye, Lock, Edit2, Trash2, Plus } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Eye, Edit2, Trash2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import userService from "@/services/userService";
 import type { User } from "@/types";
 
 export default function AdminUsers() {
   const navigate = useNavigate();
-  const [users, setUsers] = useState<User[]>(userService.getUsers());
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  function refresh() {
-    setUsers(userService.getUsers());
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await userService.getUsers();
+      setUsers(result);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await userService.deleteUser(id);
+      setConfirmDelete(null);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
@@ -178,11 +209,7 @@ export default function AdminUsers() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  userService.deleteUser(confirmDelete);
-                  setConfirmDelete(null);
-                  refresh();
-                }}
+                onClick={() => handleDelete(confirmDelete)}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete

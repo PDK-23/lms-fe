@@ -1,5 +1,5 @@
 import { Card, Button } from "@/components/ui";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Edit2, Link } from "lucide-react";
 import moduleService from "@/services/moduleService";
@@ -11,24 +11,47 @@ export default function AdminModuleView() {
   const { id } = useParams();
   const [module, setModule] = useState<Module | null>(null);
   const [groupName, setGroupName] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    const found = moduleService.getById(id);
-    if (!found) {
-      alert("Module not found");
-      navigate("/admin/modules");
+  const fetchData = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
       return;
     }
-    setModule(found);
-
-    if (found.moduleGroupId) {
-      const group = moduleGroupService.getById(found.moduleGroupId);
-      if (group) {
-        setGroupName(group.name);
+    try {
+      setLoading(true);
+      const found = await moduleService.getById(id);
+      if (!found) {
+        alert("Module not found");
+        navigate("/admin/modules");
+        return;
       }
+      setModule(found);
+
+      if (found.moduleGroupId) {
+        const group = await moduleGroupService.getById(found.moduleGroupId);
+        if (group) {
+          setGroupName(group.name);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch module:", error);
+    } finally {
+      setLoading(false);
     }
   }, [id, navigate]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!module) return null;
 

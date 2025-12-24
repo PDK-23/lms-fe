@@ -1,5 +1,5 @@
 import { Card, Button } from "@/components/ui";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Edit2, Trash2, Eye, Link } from "lucide-react";
 import type { ModuleGroup } from "@/types";
@@ -10,29 +10,52 @@ export default function AdminModuleGroups() {
   const navigate = useNavigate();
   const [groups, setGroups] = useState<ModuleGroup[]>([]);
   const [moduleCounts, setModuleCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<ModuleGroup | null>(null);
 
-  useEffect(() => {
-    const loadedGroups = moduleGroupService.getAll();
-    setGroups(loadedGroups);
-    // Count modules for each group
-    const counts: Record<string, number> = {};
-    loadedGroups.forEach((g) => {
-      counts[g.id] = moduleService.getByModuleGroupId(g.id).length;
-    });
-    setModuleCounts(counts);
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const loadedGroups = await moduleGroupService.getAll();
+      setGroups(loadedGroups);
+      // Count modules for each group
+      const counts: Record<string, number> = {};
+      for (const g of loadedGroups) {
+        const modules = await moduleService.getByModuleGroupId(g.id);
+        counts[g.id] = modules.length;
+      }
+      setModuleCounts(counts);
+    } catch (error) {
+      console.error("Failed to fetch module groups:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleDelete = () => {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleDelete = async () => {
     if (!groupToDelete) return;
-    const success = moduleGroupService.remove(groupToDelete.id);
-    if (success) {
-      setGroups((prev) => prev.filter((g) => g.id !== groupToDelete.id));
+    try {
+      await moduleGroupService.remove(groupToDelete.id);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete module group:", error);
     }
     setConfirmOpen(false);
     setGroupToDelete(null);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

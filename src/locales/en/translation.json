@@ -34,7 +34,8 @@
       "errors": {
         "emailInvalid": "Invalid email",
         "passwordMin": "Password must be at least 6 characters",
-        "loginFailed": "Sign in failed. Please try again."
+        "loginFailed": "Sign in failed. Please try again.",
+        "invalidCredentials": "Invalid email or password"
       }
     },
     "signup": {
@@ -66,7 +67,8 @@
         "emailInvalid": "Invalid email",
         "passwordRequirement": "Password must contain uppercase, lowercase and number",
         "passwordMismatch": "Passwords do not match",
-        "signupFailed": "Sign up failed. Please try again."
+        "signupFailed": "Sign up failed. Please try again.",
+        "emailExists": "This email is already registered"
       },
       "termsPrefix": "I agree to the",
       "termsLink": "Terms of Service",

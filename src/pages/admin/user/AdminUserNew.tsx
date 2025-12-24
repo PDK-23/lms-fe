@@ -29,12 +29,16 @@ export default function AdminUserNew() {
 
   const handleCreate = async () => {
     if (!form.name || !form.email) return;
-    setIsCreating(true);
-    const newUser = { ...form, id: Date.now().toString() };
-    await new Promise((r) => setTimeout(r, 300));
-    userService.addUser(newUser as any);
-    setIsCreating(false);
-    navigate("/admin/users");
+    try {
+      setIsCreating(true);
+      const newUser = { ...form, id: Date.now().toString() };
+      await userService.addUser(newUser as any);
+      navigate("/admin/users");
+    } catch (error) {
+      console.error("Failed to create user:", error);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (

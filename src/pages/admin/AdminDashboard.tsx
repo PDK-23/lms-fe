@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, Button } from "@/components/ui";
 import { useNavigate } from "react-router-dom";
-import { ALL_COURSES } from "@/mocks/courses";
+import courseService from "@/services/courseService";
+import type { Course } from "@/types";
 import {
   Users,
   BookOpen,
@@ -13,65 +14,85 @@ import {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const stats = useMemo(
-    () => [
-      {
-        id: "courses",
-        label: "Courses",
-        value: ALL_COURSES.length,
-        icon: BookOpen,
-        delta: "+3 this week",
-      },
-      {
-        id: "students",
-        label: "Students",
-        value: 45230,
-        icon: Users,
-        delta: "+1.2%",
-      },
-      {
-        id: "revenue",
-        label: "Revenue (USD)",
-        value: "$72,400",
-        icon: DollarSign,
-        delta: "+8%",
-      },
-      {
-        id: "engagement",
-        label: "Engagement",
-        value: "72%",
-        icon: BarChart3,
-        delta: "+4%",
-      },
-    ],
-    []
-  );
+  const fetchCourses = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await courseService.getCourses();
+      setCourses(data);
+    } catch (error) {
+      console.error("Failed to fetch courses:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const recentCourses = useMemo(() => ALL_COURSES.slice(0, 5), []);
-  const recentEnrollments = useMemo(
-    () => [
-      {
-        id: 1,
-        user: "Anh Tran",
-        course: ALL_COURSES[0]?.title || "Course A",
-        date: "2 hours ago",
-      },
-      {
-        id: 2,
-        user: "Minh Le",
-        course: ALL_COURSES[1]?.title || "Course B",
-        date: "1 day ago",
-      },
-      {
-        id: 3,
-        user: "Linh Nguyen",
-        course: ALL_COURSES[2]?.title || "Course C",
-        date: "2 days ago",
-      },
-    ],
-    []
-  );
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
+
+  const stats = [
+    {
+      id: "courses",
+      label: "Courses",
+      value: courses.length,
+      icon: BookOpen,
+      delta: "+3 this week",
+    },
+    {
+      id: "students",
+      label: "Students",
+      value: 45230,
+      icon: Users,
+      delta: "+1.2%",
+    },
+    {
+      id: "revenue",
+      label: "Revenue (USD)",
+      value: "$72,400",
+      icon: DollarSign,
+      delta: "+8%",
+    },
+    {
+      id: "engagement",
+      label: "Engagement",
+      value: "72%",
+      icon: BarChart3,
+      delta: "+4%",
+    },
+  ];
+
+  const recentCourses = courses.slice(0, 5);
+  const recentEnrollments = [
+    {
+      id: 1,
+      user: "Anh Tran",
+      course: courses[0]?.title || "Course A",
+      date: "2 hours ago",
+    },
+    {
+      id: 2,
+      user: "Minh Le",
+      course: courses[1]?.title || "Course B",
+      date: "1 day ago",
+    },
+    {
+      id: 3,
+      user: "Linh Nguyen",
+      course: courses[2]?.title || "Course C",
+      date: "2 days ago",
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">

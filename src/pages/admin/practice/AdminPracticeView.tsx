@@ -1,5 +1,5 @@
 import { Card, Button } from "@/components/ui";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import practiceService from "@/services/practiceService";
 import type { Practice } from "@/types";
@@ -8,12 +8,35 @@ export default function AdminPracticeView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [practice, setPractice] = useState<Practice | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const p = await practiceService.getPracticeById(id);
+      setPractice(p || null);
+    } catch (error) {
+      console.error("Failed to fetch practice:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    if (!id) return;
-    const p = practiceService.getPracticeById(id);
-    setPractice(p || null);
-  }, [id]);
+    fetchData();
+  }, [fetchData]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!practice)
     return <div className="text-neutral-600">Practice not found</div>;

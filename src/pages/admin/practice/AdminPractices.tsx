@@ -1,5 +1,5 @@
 import { Card, Button, Input } from "@/components/ui";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Edit2, Trash2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import practiceService from "@/services/practiceService";
@@ -7,21 +7,50 @@ import type { Practice } from "@/types";
 
 export default function AdminPractices() {
   const navigate = useNavigate();
-  const [practices, setPractices] = useState<Practice[]>(
-    practiceService.getPractices()
-  );
+  const [practices, setPractices] = useState<Practice[]>([]);
+  const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  function refresh() {
-    setPractices(practiceService.getPractices());
-  }
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await practiceService.getPractices();
+      setPractices(result);
+    } catch (error) {
+      console.error("Failed to fetch practices:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await practiceService.deletePractice(id);
+      setConfirmDelete(null);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete practice:", error);
+    }
+  };
 
   const filtered = practices.filter(
     (p) =>
       p.title.toLowerCase().includes(search.toLowerCase()) ||
       p.slug.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -118,11 +147,7 @@ export default function AdminPractices() {
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  practiceService.deletePractice(confirmDelete);
-                  setConfirmDelete(null);
-                  refresh();
-                }}
+                onClick={() => handleDelete(confirmDelete)}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete
