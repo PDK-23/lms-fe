@@ -4,11 +4,11 @@ import {
   CoursesPage,
   LoginPage,
   SignUpPage,
+  ForgotPasswordPage,
   SettingsPage,
   PurchasesPage,
   CertificatesPage,
   CourseDetailPage,
-  VideoLearningPage,
   AdminDashboard,
   AdminCourses,
   AdminCourseDetail,
@@ -39,9 +39,23 @@ import {
   AdminQuizNew,
   AdminQuizDetail,
   AdminQuizView,
+  AdminPractices,
+  AdminPracticeNew,
+  AdminPracticeDetail,
+  AdminPracticeView,
+  AdminModules,
+  AdminModuleNew,
+  AdminModuleDetail,
+  AdminModuleView,
+  AdminModuleGroups,
+  AdminModuleGroupNew,
+  AdminModuleGroupDetail,
+  AdminModuleGroupView,
   QuizPage,
   CodePracticePage,
+  ChatPage,
   CartPage,
+  LessonPage,
 } from "@/pages";
 import AdminLayout from "@/layouts/AdminLayout";
 import MainLayout from "./layouts/MainLayout";
@@ -55,8 +69,9 @@ function App() {
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:id" element={<CourseDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
-          <Route path="/courses/:id/learn/*" element={<VideoLearningPage />} />
+          <Route path="/chat" element={<ChatPage />} />
         </Route>
+        <Route path="/courses/:id/learn/*" element={<LessonPage />} />
         <Route
           path="/courses/:id/learn/lesson/:lessonId/quiz"
           element={<QuizPage />}
@@ -67,6 +82,7 @@ function App() {
         />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/purchases" element={<PurchasesPage />} />
         <Route path="/certificates" element={<CertificatesPage />} />
@@ -113,6 +129,24 @@ function App() {
           <Route path="quizzes/new" element={<AdminQuizNew />} />
           <Route path="quizzes/:id" element={<AdminQuizDetail />} />
           <Route path="quizzes/:id/view" element={<AdminQuizView />} />
+          <Route path="practices" element={<AdminPractices />} />
+          <Route path="practices/new" element={<AdminPracticeNew />} />
+          <Route path="practices/:id" element={<AdminPracticeDetail />} />
+          <Route path="practices/:id/view" element={<AdminPracticeView />} />
+          <Route path="modules" element={<AdminModules />} />
+          <Route path="modules/new" element={<AdminModuleNew />} />
+          <Route path="modules/:id" element={<AdminModuleDetail />} />
+          <Route path="modules/:id/view" element={<AdminModuleView />} />
+          <Route path="module-groups" element={<AdminModuleGroups />} />
+          <Route path="module-groups/new" element={<AdminModuleGroupNew />} />
+          <Route
+            path="module-groups/:id"
+            element={<AdminModuleGroupDetail />}
+          />
+          <Route
+            path="module-groups/:id/view"
+            element={<AdminModuleGroupView />}
+          />
         </Route>
       </Routes>
     </Router>

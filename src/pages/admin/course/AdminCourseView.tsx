@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Edit2, Trash2, Plus, Eye } from "lucide-react";
 import courseService from "@/services/courseService";
 import quizService from "@/services/quizService";
+import practiceService from "@/services/practiceService";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
 import type { Course, Section, Lesson } from "@/types";
@@ -563,22 +564,42 @@ export default function AdminCourseView() {
               {(editingLesson as any)?.type === "practice" && (
                 <div className="space-y-2">
                   <label className="block text-sm text-neutral-700 mb-1">
-                    Practice Slug/ID
+                    Practice
                   </label>
-                  <Input
-                    value={(editingLesson as any)?.practiceId || ""}
-                    onChange={(e) =>
-                      setEditingLesson((l) => ({
-                        ...(l || {
-                          id: Date.now().toString(),
-                          title: "",
-                          duration: 0,
-                        }),
-                        practiceId: e.target.value,
-                      }))
-                    }
-                    placeholder="two-sum"
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={(editingLesson as any)?.practiceId || ""}
+                      onChange={(e) =>
+                        setEditingLesson((l) => ({
+                          ...(l || {
+                            id: Date.now().toString(),
+                            title: "",
+                            duration: 0,
+                          }),
+                          practiceId: e.target.value,
+                        }))
+                      }
+                      className="flex-1 px-3 py-2 border rounded"
+                    >
+                      <option value="">Select a practice</option>
+                      {practiceService.getPractices().map((p) => (
+                        <option key={p.id} value={p.slug}>
+                          {p.title} ({p.slug})
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setLessonEditorOpen(false);
+                        navigate("/admin/practices/new");
+                      }}
+                    >
+                      New
+                    </Button>
+                  </div>
+
                   <label className="block text-sm text-neutral-700 mb-1">
                     Practice Language (optional)
                   </label>

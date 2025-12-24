@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui";
-import { Menu, X, ShoppingCart } from "lucide-react";
+import { Menu, X, ShoppingCart, MessageSquare } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import cartService from "@/services/cartService";
@@ -32,6 +32,7 @@ export function Header() {
 
   const userMenuOptions = [
     { to: "/my-courses", label: "header.myCourses" },
+    { to: "/chat", label: "Messages" },
     { to: "/about", label: "header.about" },
     { to: "/settings", label: "header.profile" },
     { to: "/purchases", label: "header.purchases" },
@@ -73,6 +74,9 @@ export function Header() {
 
             {/* Right Actions */}
             <div className="hidden sm:flex items-center gap-4">
+              <button onClick={() => navigate("/chat")} aria-label="Messages">
+                <MessageSquare className="w-5 h-5 text-neutral-600" />
+              </button>
               <button
                 className="p-2 hover:bg-neutral-100 rounded-lg transition-colors relative"
                 onClick={() => navigate("/cart")}

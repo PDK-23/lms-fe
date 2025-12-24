@@ -11,6 +11,8 @@ import {
   Medal,
   Tag as TagIcon,
   Clipboard,
+  Layers,
+  FolderTree,
 } from "lucide-react";
 
 export default function AdminLayout() {
@@ -20,6 +22,9 @@ export default function AdminLayout() {
     { to: ".", label: "Dashboard", icon: Home, end: true },
     { to: "courses", label: "Courses", icon: BookOpen },
     { to: "quizzes", label: "Quizzes", icon: Clipboard },
+    { to: "practices", label: "Practices", icon: Clipboard },
+    { to: "modules", label: "Modules", icon: Layers },
+    { to: "module-groups", label: "Module Groups", icon: FolderTree },
     { to: "categories", label: "Categories", icon: BookOpen },
     { to: "tags", label: "Tags", icon: TagIcon },
     { to: "specializations", label: "Specializations", icon: Medal },
@@ -71,7 +76,7 @@ export default function AdminLayout() {
               : "-translate-x-full md:translate-x-0"
           } md:sticky md:top-4`}
         >
-          <div className="mb-6 hidden md:block">
+          <div className="mb-2 hidden md:block">
             <div className="flex gap-1 items-center">
               <Link to="/" className="flex items-center gap-2">
                 <div className="h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold px-2">

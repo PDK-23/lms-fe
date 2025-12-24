@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui";
-import ALL_COURSES from "@/mocks/courses";
+import ALL_COURSES, { getCourseSections } from "@/mocks/courses";
 import reviewService from "@/services/reviewService";
 import type { Review } from "@/types";
 import { Curriculum } from "@/components/course/CourseDetail";
@@ -17,28 +17,11 @@ export default function CourseDetailPage() {
   const navigate = useNavigate();
   const course = ALL_COURSES.find((c) => c.id === id);
 
-  // simple mock: generate sections if none
+  // Get sections from mock data
   const sections = useMemo(() => {
     if (!course) return [];
-    return [
-      {
-        id: "s1",
-        title: "Getting started",
-        lessons: [
-          { id: "l1", title: "Intro", duration: 5 },
-          { id: "l2", title: "Setup", duration: 10 },
-        ],
-      },
-      {
-        id: "s2",
-        title: "Core concepts",
-        lessons: [
-          { id: "l3", title: "Topic A", duration: 20 },
-          { id: "l4", title: "Topic B", duration: 25 },
-        ],
-      },
-    ];
-  }, [course]);
+    return getCourseSections(id);
+  }, [course, id]);
 
   const [reviews, setReviews] = useState<Review[]>([]);
 
@@ -83,7 +66,7 @@ export default function CourseDetailPage() {
                 {course.students} students
               </div>
               <div className="mt-4">{course.description}</div>
-              <div className="mt-4">
+              <div className="mt-4 sm:block md:hidden">
                 <div className="text-2xl font-bold">
                   {(course.price * 23000).toLocaleString("vi-VN")} ₫
                 </div>
@@ -95,14 +78,6 @@ export default function CourseDetailPage() {
                   }}
                 >
                   {t("cta.enroll")}
-                </button>
-                <button
-                  onClick={() => {
-                    navigate("learn");
-                  }}
-                  className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-                >
-                  Add to Cart
                 </button>
                 <button
                   onClick={() => {
@@ -145,14 +120,6 @@ export default function CourseDetailPage() {
                           }}
                         >
                           {t("cta.enroll")}
-                        </button>
-                        <button
-                          onClick={() => {
-                            navigate("learn");
-                          }}
-                          className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-                        >
-                          Add to Cart
                         </button>
                         <button
                           onClick={() => {

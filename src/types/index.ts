@@ -94,6 +94,19 @@ export interface QuizQuestion {
   correctAnswer: string | number | Array<string | number>;
 }
 
+export interface Practice {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string;
+  difficulty?: "easy" | "medium" | "hard";
+  defaultLanguage?: string;
+  tags?: string[];
+  externalUrl?: string;
+  templates?: { [lang: string]: string };
+  tests?: { input: string; output: string }[];
+}
+
 export interface Tag {
   id: string;
   name: string;
@@ -107,6 +120,33 @@ export interface Specialization {
   // a specialization can include many course ids
   courseIds?: string[];
 }
+
+export interface Module {
+  id: string;
+  name: string;
+  url: string;
+  icon?: string;
+  description?: string;
+  moduleGroupId: string;
+  createdById: string;
+  createdAt: Date;
+  updatedById?: string;
+  updatedAt?: Date;
+}
+
+export interface ModuleGroup {
+  id: string;
+  name: string;
+  description?: string;
+  icon: string;
+  url: string;
+  modules?: Module[];
+  createdById: string;
+  createdAt: Date;
+  updatedById?: string;
+  updatedAt?: Date;
+}
+
 export interface Certificate {
   id: string;
   courseId: string;
@@ -170,4 +210,25 @@ export interface SignUpCredentials {
   email: string;
   password: string;
   confirmPassword: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  content: string;
+  timestamp: Date;
+  isRead: boolean;
+}
+
+export interface Conversation {
+  id: string;
+  participantIds: string[];
+  participantNames: string[];
+  participantAvatars?: string[];
+  lastMessage?: string;
+  lastMessageTime?: Date;
+  unreadCount: number;
 }
