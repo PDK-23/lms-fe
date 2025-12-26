@@ -72,11 +72,11 @@ export function VideoLessonPlayer({
         {/* Sections List */}
         <div className="overflow-y-auto flex-1">
           {sections.map((section) => (
-            <div key={section.id} className="border-b border-neutral-200">
+            <div key={section.id} className="">
               {/* Section Header */}
               <button
                 onClick={() => toggleSection(section.id)}
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-neutral-50 transition-colors"
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-neutral-50 transition-colors border-b"
               >
                 <div className="flex items-center gap-3 flex-1 text-left">
                   <div className="flex-1">
@@ -97,11 +97,11 @@ export function VideoLessonPlayer({
 
               {/* Lessons List */}
               {expandedSections[section.id] && (
-                <div className="bg-neutral-50">
+                <div className="">
                   {section.lessons?.map((lesson, idx) => (
                     <div
                       key={lesson.id}
-                      className={`w-full px-4 py-3 border-l-2 ${
+                      className={`w-full px-4 py-3 border-l-2 bg-neutral-50 border-b ${
                         currentLesson?.id === lesson.id
                           ? "bg-indigo-50 border-l-indigo-600"
                           : "border-l-transparent"
@@ -121,14 +121,16 @@ export function VideoLessonPlayer({
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-neutral-900 truncate">
-                            {idx + 1}. {lesson.title}
+                          <p className="text-sm text-neutral-900 truncate">
+                            {lesson.title}
                           </p>
-                        </div>
-                        <div className="flex items-center gap-2 text-neutral-500 flex-shrink-0">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-3 h-3" />
-                            <span className="text-xs">{lesson.duration}m</span>
+                          <div className="flex items-center gap-2 text-neutral-500 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-3 h-3" />
+                              <span className="text-xs">
+                                {lesson.duration}m
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </button>

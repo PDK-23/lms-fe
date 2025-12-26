@@ -197,10 +197,10 @@ export default function CourseDetailPage() {
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-12 max-w-7xl mx-auto w-full px-4 md:px-8 py-8 md:py-12 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-12 max-w-7xl mx-auto w-full px-4 md:px-8 md:py-4 gap-6">
         <div className="md:col-span-8 col-span-1 space-y-8">
           <div>
-            <h2 className="text-xl md:text-2xl font-semibold mb-3">
+            <h2 className="md:text-xl font-semibold mb-3">
               {t("course.curriculum")}
             </h2>
             <Curriculum sections={sections} />
