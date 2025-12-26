@@ -1,10 +1,19 @@
-export interface User {
+// Auth-specific user type returned from API
+export interface AuthUser {
   id: string;
   name: string;
   email: string;
   avatar?: string;
+  bio?: string;
+  phone?: string;
+  role: UserRole;
+  isActive?: boolean;
+  location?: string;
+  lastLoginAt?: string;
   createdAt: string;
 }
+
+export type UserRole = "STUDENT" | "INSTRUCTOR" | "ADMIN";
 
 export interface LoginCredentials {
   email: string;
@@ -19,6 +28,18 @@ export interface SignUpCredentials {
 }
 
 export interface AuthResponse {
-  user: User;
-  token: string;
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+  user: AuthUser;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }

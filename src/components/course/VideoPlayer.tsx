@@ -101,7 +101,7 @@ export function VideoPlayer({
   };
 
   return (
-    <div className="bg-black rounded-lg overflow-hidden">
+    <div className="bg-black overflow-hidden !mt-0">
       <div
         className="relative bg-black aspect-video group"
         onMouseMove={handleMouseMove}
@@ -244,9 +244,6 @@ export function VideoPlayer({
           </div>
         </div>
       </div>
-
-      {/* Video Info */}
-      {/* <h2 className="text-xl font-bold text-neutral-900">{title}</h2> */}
     </div>
   );
 }

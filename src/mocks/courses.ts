@@ -1,6 +1,123 @@
-import { type Course } from "@/types";
+import { type Course, type Section } from "@/types";
 import { CATEGORIES } from "./categories";
 import { MOCK_INSTRUCTORS } from "./instructors";
+
+// Default sections for all courses
+export const DEFAULT_COURSE_SECTIONS: Section[] = [
+  {
+    id: "s1",
+    title: "Getting Started",
+    lessons: [
+      {
+        id: "l1",
+        title: "Introduction to the Course",
+        duration: 5,
+        videoUrl:
+          "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        isCompleted: false,
+      },
+      {
+        id: "l2",
+        title: "Course Overview",
+        duration: 10,
+        videoUrl:
+          "https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+        isCompleted: true,
+        quizAvailable: true,
+      },
+      {
+        id: "l3",
+        title: "Tools and Setup",
+        duration: 15,
+        videoUrl: undefined,
+        isCompleted: false,
+      },
+    ],
+  },
+  {
+    id: "s2",
+    title: "Core Concepts",
+    lessons: [
+      {
+        id: "l4",
+        title: "Fundamental Principles",
+        duration: 20,
+        videoUrl:
+          "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        isCompleted: false,
+        practiceId: "two-sum",
+      },
+      {
+        id: "l5",
+        title: "Deep Dive into Topic A",
+        duration: 25,
+        videoUrl: undefined,
+        isCompleted: false,
+      },
+      {
+        id: "l6",
+        title: "Practical Examples",
+        duration: 18,
+        videoUrl: undefined,
+        isCompleted: false,
+      },
+    ],
+  },
+  {
+    id: "s3",
+    title: "Advanced Topics",
+    lessons: [
+      {
+        id: "l7",
+        title: "Building Real Projects",
+        duration: 30,
+        videoUrl: undefined,
+        isCompleted: false,
+        quizAvailable: true,
+      },
+      {
+        id: "l8",
+        title: "Best Practices",
+        duration: 22,
+        videoUrl: undefined,
+        isCompleted: false,
+      },
+      {
+        id: "l9",
+        title: "Optimization Techniques",
+        duration: 28,
+        videoUrl: undefined,
+        isCompleted: false,
+      },
+    ],
+  },
+  {
+    id: "s4",
+    title: "Projects & Assessment",
+    lessons: [
+      {
+        id: "l10",
+        title: "Capstone Project",
+        duration: 45,
+        videoUrl: undefined,
+        isCompleted: false,
+      },
+      {
+        id: "l11",
+        title: "Final Quiz",
+        duration: 15,
+        videoUrl: undefined,
+        isCompleted: false,
+      },
+    ],
+  },
+];
+
+// Helper function to get sections for a course
+export const getCourseSections = (courseId: string): Section[] => {
+  const course = ALL_COURSES.find((c) => c.id === courseId);
+  return course?.sections || DEFAULT_COURSE_SECTIONS;
+};
 
 export const ALL_COURSES: Course[] = [
   {
@@ -20,6 +137,8 @@ export const ALL_COURSES: Course[] = [
     level: "Beginner",
     tags: ["web", "programming", "javascript"],
     isBestseller: true,
+    // Use default sections
+    sections: DEFAULT_COURSE_SECTIONS,
   },
   {
     id: "2",

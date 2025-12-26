@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui";
-import { Menu, X, ShoppingCart } from "lucide-react";
-import { useState } from "react";
+import { Menu, X, ShoppingCart, MessageSquare } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import cartService from "@/services/cartService";
 import { useTranslation } from "react-i18next";
 import { CATEGORIES } from "@/lib/constants";
 import { useAppStore } from "@/store/useAppStore";
@@ -31,6 +32,7 @@ export function Header() {
 
   const userMenuOptions = [
     { to: "/my-courses", label: "header.myCourses" },
+    { to: "/chat", label: "Messages" },
     { to: "/about", label: "header.about" },
     { to: "/settings", label: "header.profile" },
     { to: "/purchases", label: "header.purchases" },
@@ -72,7 +74,14 @@ export function Header() {
 
             {/* Right Actions */}
             <div className="hidden sm:flex items-center gap-4">
-              <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors relative">
+              <button onClick={() => navigate("/chat")} aria-label="Messages">
+                <MessageSquare className="w-5 h-5 text-neutral-600" />
+              </button>
+              <button
+                className="p-2 hover:bg-neutral-100 rounded-lg transition-colors relative"
+                onClick={() => navigate("/cart")}
+                aria-label="View cart"
+              >
                 <ShoppingCart className="w-5 h-5 text-neutral-600" />
                 <span className="absolute top-1 right-1 w-4 h-4 bg-danger-500 text-white text-xs rounded-full flex items-center justify-center">
                   0

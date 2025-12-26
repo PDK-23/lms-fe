@@ -4,6 +4,8 @@ export interface Category {
   icon: string;
   color: string;
   courseCount: number;
+  // Optional parent category id to support category hierarchies
+  parentId?: string;
 }
 
 export interface Instructor {
@@ -21,7 +23,10 @@ export interface Course {
   id: string;
   title: string;
   description: string;
+  // Keep the full category object for backward compatibility in UI,
+  // but store the canonical relation as categoryId so edits can be persisted
   category: Category;
+  categoryId?: string;
   instructor: Instructor;
   price: number;
   originalPrice?: number;
@@ -32,20 +37,37 @@ export interface Course {
   duration: number; // in hours
   level: "Beginner" | "Intermediate" | "Advanced";
   tags: string[];
+  // A course can belong to one specialization (later feature)
+  specializationId?: string;
   isBestseller?: boolean;
   isTrending?: boolean;
   isNew?: boolean;
+
+  // Optional course sections with lessons
+  sections?: Section[];
 }
+
+export type LessonType = "video" | "quiz" | "practice";
 
 export interface Lesson {
   id: string;
   title: string;
   duration: number; // in minutes
+  type?: LessonType; // defaults to 'video'
+
+  // Video lesson fields
   videoUrl?: string;
   materials?: string[];
-  isCompleted?: boolean;
+
+  // Quiz fields
   quizAvailable?: boolean; // whether this lesson has a quiz
+  quizId?: string; // optional id of a quiz
+
+  // Practice fields
   practiceId?: string; // optional practice slug/id
+  practiceLanguage?: string; // optional default language for practice
+
+  isCompleted?: boolean;
 }
 
 export interface Section {
@@ -68,7 +90,61 @@ export interface QuizQuestion {
   text: string;
   type: "multiple-choice" | "true-false" | "short-answer";
   options?: string[];
-  correctAnswer: string | number;
+  // correctAnswer may be a single value or an array (for multiple correct options)
+  correctAnswer: string | number | Array<string | number>;
+}
+
+export interface Practice {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string;
+  difficulty?: "easy" | "medium" | "hard";
+  defaultLanguage?: string;
+  tags?: string[];
+  externalUrl?: string;
+  templates?: { [lang: string]: string };
+  tests?: { input: string; output: string }[];
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  color?: string;
+}
+
+export interface Specialization {
+  id: string;
+  name: string;
+  description?: string;
+  // a specialization can include many course ids
+  courseIds?: string[];
+}
+
+export interface Module {
+  id: string;
+  name: string;
+  url: string;
+  icon?: string;
+  description?: string;
+  moduleGroupId: string;
+  createdById: string;
+  createdAt: Date;
+  updatedById?: string;
+  updatedAt?: Date;
+}
+
+export interface ModuleGroup {
+  id: string;
+  name: string;
+  description?: string;
+  icon: string;
+  url: string;
+  modules?: Module[];
+  createdById: string;
+  createdAt: Date;
+  updatedById?: string;
+  updatedAt?: Date;
 }
 
 export interface Certificate {
@@ -97,6 +173,12 @@ export interface User {
   name: string;
   avatar?: string;
   bio?: string;
+  phone?: string;
+  role?: "student" | "instructor" | "admin";
+  isActive?: boolean;
+  lastLogin?: Date | string;
+  location?: string;
+  provider?: string;
   enrolledCourses: string[];
   completedCourses: string[];
   certificates: Certificate[];
@@ -128,4 +210,25 @@ export interface SignUpCredentials {
   email: string;
   password: string;
   confirmPassword: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  content: string;
+  timestamp: Date;
+  isRead: boolean;
+}
+
+export interface Conversation {
+  id: string;
+  participantIds: string[];
+  participantNames: string[];
+  participantAvatars?: string[];
+  lastMessage?: string;
+  lastMessageTime?: Date;
+  unreadCount: number;
 }
