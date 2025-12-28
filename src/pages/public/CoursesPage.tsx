@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui";
 import { CourseCard, SearchBar } from "@/components/course";
 import { CATEGORIES, LEVELS, RATING_LEVELS } from "@/lib/constants";
-import { ALL_COURSES } from "@/mocks/courses";
+import courseService from "@/services/courseService";
 import { type Course } from "@/types";
-import { useEffect, useState } from "react";
-import { ChevronDown, X } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { ChevronDown } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
-// Courses are provided by the mock data module
+// Courses are provided by the API
 
 interface Filters {
   category: string[];
@@ -17,7 +17,9 @@ interface Filters {
 }
 
 export function CoursesPage() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [_searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Filters>({
     category: [],
     level: [],
@@ -26,6 +28,23 @@ export function CoursesPage() {
   });
   const [showFilters, setShowFilters] = useState(false);
   const location = useLocation();
+
+  // Fetch courses from API
+  const fetchCourses = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await courseService.getCourses();
+      setCourses(data);
+    } catch (error) {
+      console.error("Failed to fetch courses:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
 
   // Read category from query params and apply as initial filter
   useEffect(() => {
@@ -205,13 +224,19 @@ export function CoursesPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {ALL_COURSES.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  onEnroll={(courseId) => console.log("Enrolled:", courseId)}
-                />
-              ))}
+              {loading ? (
+                <div className="col-span-full flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                courses.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    onEnroll={(courseId) => console.log("Enrolled:", courseId)}
+                  />
+                ))
+              )}
             </div>
           </div>
         </div>

@@ -1,5 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { LoginCredentials, SignUpCredentials, User } from "@/types";
+import type { AuthUser } from "@/types/auth";
+import authService from "@/services/authService";
 
 interface UseAuthReturn {
   user: User | null;
@@ -10,54 +12,56 @@ interface UseAuthReturn {
   logout: () => void;
   updateProfile: (data: Partial<User>) => void;
   isAuthenticated: boolean;
+  refreshUser: () => Promise<void>;
+}
+
+// Convert AuthUser from API to local User type
+function authUserToUser(authUser: AuthUser): User {
+  return {
+    id: authUser.id,
+    email: authUser.email,
+    name: authUser.name,
+    avatar: authUser.avatar,
+    bio: authUser.bio,
+    phone: authUser.phone,
+    role: authUser.role?.toLowerCase() as "student" | "instructor" | "admin",
+    isActive: authUser.isActive,
+    location: authUser.location,
+    lastLogin: authUser.lastLoginAt,
+    enrolledCourses: [],
+    completedCourses: [],
+    certificates: [],
+    createdAt: new Date(authUser.createdAt),
+  };
 }
 
 export function useAuth(): UseAuthReturn {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
-  // Check if user is already logged in (from localStorage)
-  if (!user && typeof window !== "undefined") {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error("Error parsing stored user:", err);
+  // Initialize user from localStorage on mount
+  useEffect(() => {
+    if (!initialized) {
+      const storedUser = authService.getStoredUser();
+      if (storedUser) {
+        setUser(authUserToUser(storedUser));
       }
+      setInitialized(true);
     }
-  }
+  }, [initialized]);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Call API or use mock data
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(credentials),
-      // });
-      // const data = await response.json();
-
-      // Mock implementation
-      const mockUser: User = {
-        id: "1",
-        name: credentials.email.split("@")[0],
-        email: credentials.email,
-        enrolledCourses: [],
-        completedCourses: [],
-        certificates: [],
-        createdAt: new Date(),
-      };
-
-      setUser(mockUser);
-      localStorage.setItem("user", JSON.stringify(mockUser));
-      localStorage.setItem("token", `token_${Date.now()}`);
+      const response = await authService.login(credentials);
+      setUser(authUserToUser(response.user));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed";
+      const message =
+        err instanceof Error ? err.message : "Login failed. Please try again.";
       setError(message);
       throw err;
     } finally {
@@ -70,30 +74,15 @@ export function useAuth(): UseAuthReturn {
     setError(null);
 
     try {
-      // Call API or use mock data
-      // const response = await fetch('/api/auth/signup', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(credentials),
-      // });
-      // const data = await response.json();
-
-      // Mock implementation
-      const mockUser: User = {
-        id: Math.random().toString(),
+      const response = await authService.register({
         name: credentials.name,
         email: credentials.email,
-        enrolledCourses: [],
-        completedCourses: [],
-        certificates: [],
-        createdAt: new Date(),
-      };
-
-      setUser(mockUser);
-      localStorage.setItem("user", JSON.stringify(mockUser));
-      localStorage.setItem("token", `token_${Date.now()}`);
+        password: credentials.password,
+      });
+      setUser(authUserToUser(response.user));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Signup failed";
+      const message =
+        err instanceof Error ? err.message : "Signup failed. Please try again.";
       setError(message);
       throw err;
     } finally {
@@ -102,21 +91,55 @@ export function useAuth(): UseAuthReturn {
   }, []);
 
   const logout = useCallback(() => {
+    authService.logout();
     setUser(null);
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
   }, []);
 
   const updateProfile = useCallback((data: Partial<User>) => {
     setUser((prev) => {
-      const updated = { ...prev, ...data } as User;
-      try {
-        localStorage.setItem("user", JSON.stringify(updated));
-      } catch (err) {
-        console.error("Failed to persist updated user:", err);
-      }
+      if (!prev) return null;
+      const updated = { ...prev, ...data };
+      // Convert back to AuthUser for storage
+      const authUserToStore: AuthUser = {
+        id: updated.id,
+        email: updated.email,
+        name: updated.name,
+        avatar: updated.avatar,
+        bio: updated.bio,
+        phone: updated.phone,
+        role: (updated.role?.toUpperCase() || "STUDENT") as AuthUser["role"],
+        isActive: updated.isActive,
+        location: updated.location,
+        lastLoginAt:
+          updated.lastLogin instanceof Date
+            ? updated.lastLogin.toISOString()
+            : (updated.lastLogin as string),
+        createdAt:
+          updated.createdAt instanceof Date
+            ? updated.createdAt.toISOString()
+            : String(updated.createdAt),
+      };
+      authService.storage.setUser(authUserToStore);
       return updated;
     });
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    if (!authService.isAuthenticated()) return;
+
+    setIsLoading(true);
+    try {
+      const response = await authService.getCurrentUser();
+      if (response.user) {
+        setUser(authUserToUser(response.user));
+      }
+    } catch {
+      // If failed to get current user, logout
+      authService.logout();
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   return {
@@ -127,6 +150,7 @@ export function useAuth(): UseAuthReturn {
     signup,
     logout,
     updateProfile,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && authService.isAuthenticated(),
+    refreshUser,
   };
 }
