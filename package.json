@@ -10,7 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^3.3.4",
+    "@monaco-editor/react": "^4.7.0",
+    "axios": "^1.13.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "i18next": "^23.0.0",
