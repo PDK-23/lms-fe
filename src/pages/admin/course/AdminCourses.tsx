@@ -1,9 +1,14 @@
 import { Card, Button } from "@/components/ui";
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { Edit2, Trash2 } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Edit2, Trash2, Eye } from "lucide-react";
 import * as courseService from "@/services/courseService";
 import type { Course } from "@/types";
+import TanstackTable from "@/components/admin/TanstackTable";
+import ReactPaginate from "react-paginate";
+
+// ReactPaginate may be exported as a CJS module (default under `.default`) depending on bundler interop.
+const RP: any = (ReactPaginate as any)?.default ?? ReactPaginate;
 
 export default function AdminCourses() {
   const navigate = useNavigate();
@@ -12,11 +17,24 @@ export default function AdminCourses() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
 
-  const fetchCourses = useCallback(async () => {
+  // Server-side pagination state (driven by URL query params)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPage = Number(searchParams.get("page") ?? "0");
+  const initialSize = Number(searchParams.get("size") ?? "10");
+
+  const [page, setPage] = useState(initialPage);
+  const [size, setSize] = useState(initialSize);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+
+  const fetchCourses = useCallback(async (p: number, s: number) => {
     try {
       setLoading(true);
-      const result = await courseService.getCourses();
-      setCourses(result);
+      const resp = await courseService.getCoursesPaginated(p, s);
+      setCourses(resp.content);
+      setPage(resp.page || p);
+      setTotalPages(resp.totalPages || 1);
+      setTotalElements(resp.totalElements || 0);
     } catch (error) {
       console.error("Failed to fetch courses:", error);
     } finally {
@@ -24,14 +42,20 @@ export default function AdminCourses() {
     }
   }, []);
 
+  // Sync page/size from URL params when the URL changes
   useEffect(() => {
-    fetchCourses();
-  }, [fetchCourses]);
+    const sp = Number(searchParams.get("page") ?? "0");
+    const ss = Number(searchParams.get("size") ?? "10");
+    if (sp !== page) setPage(sp);
+    if (ss !== size) setSize(ss);
+
+    // fetch current page
+    fetchCourses(sp, ss);
+  }, [searchParams, fetchCourses]);
 
   const handleDelete = async (course: Course) => {
     try {
       await courseService.deleteCourse(course.id);
-      fetchCourses();
     } catch (error) {
       console.error("Failed to delete course:", error);
     } finally {
@@ -61,118 +85,175 @@ export default function AdminCourses() {
         </Button>
       </div>
 
-      {/* Desktop Table View */}
-      <Card className="hidden md:block p-4">
+      {/* Desktop Table View: TanStack Table */}
+      <div className="hidden md:block">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-neutral-500 border-b">
-                <th className="py-3 px-2">Title</th>
-                <th className="py-3 px-2">Instructor</th>
-                <th className="py-3 px-2">Students</th>
-                <th className="py-3 px-2">Price</th>
-                <th className="py-3 px-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {courses.map((c) => (
-                <tr key={c.id} className="border-t hover:bg-neutral-50">
-                  <td className="py-3 px-2 truncate font-medium">{c.title}</td>
-                  <td className="py-3 px-2 text-neutral-600 truncate">
-                    {c.instructor.name}
-                  </td>
-                  <td className="py-3 px-2 text-neutral-600">{c.students}</td>
-                  <td className="py-3 px-2 text-neutral-600">
-                    {(c.price * 0.043).toFixed(2)} USD
-                  </td>
-                  <td className="py-3 px-2">
-                    <div className="flex gap-2">
+          <TanstackTable
+            data={courses}
+            initialPageSize={size}
+            showPagination={false}
+            columns={[
+              {
+                header: "Title",
+                accessorKey: "title",
+                cell: (info: any) => (
+                  <span className="truncate font-medium">
+                    {info.getValue()}
+                  </span>
+                ),
+              },
+              {
+                header: "Instructor",
+                accessorFn: (row: any) => row.instructor?.name,
+                id: "instructor",
+                cell: (info: any) => (
+                  <span className="text-neutral-600 truncate">
+                    {info.getValue()}
+                  </span>
+                ),
+              },
+              {
+                header: "Students",
+                accessorKey: "students",
+                cell: (info: any) => (
+                  <span className="text-neutral-600">{info.getValue()}</span>
+                ),
+              },
+              {
+                header: "Price",
+                accessorKey: "price",
+                cell: (info: any) => (
+                  <span className="text-neutral-600">
+                    {(info.getValue() * 0.043).toFixed(2)} USD
+                  </span>
+                ),
+              },
+              {
+                header: "Actions",
+                id: "actions",
+                cell: (info: any) => {
+                  const row = info.row.original as Course;
+                  return (
+                    <div className="flex items-center gap-2">
                       <Button
                         size="sm"
-                        className="flex items-center gap-1"
-                        onClick={() => navigate(`/admin/courses/${c.id}/view`)}
+                        variant="ghost"
+                        title="View"
+                        aria-label="View course"
+                        onClick={() =>
+                          navigate(`/admin/courses/${row.id}/view`)
+                        }
                       >
-                        <span className="hidden lg:inline">View</span>
+                        <Eye className="w-4 h-4" />
                       </Button>
+
                       <Button
                         size="sm"
-                        className="flex items-center gap-1"
-                        onClick={() => navigate(`/admin/courses/${c.id}`)}
+                        variant="ghost"
+                        title="Edit"
+                        aria-label="Edit course"
+                        onClick={() => navigate(`/admin/courses/${row.id}`)}
                       >
-                        <Edit2 className="w-3 h-3" />
-                        <span className="hidden lg:inline">Edit</span>
+                        <Edit2 className="w-4 h-4" />
                       </Button>
+
                       <Button
                         size="sm"
-                        className="flex items-center gap-1"
+                        variant="ghost"
+                        title="Delete"
+                        aria-label="Delete course"
                         onClick={() => {
-                          setCourseToDelete(c);
+                          setCourseToDelete(row);
                           setConfirmOpen(true);
                         }}
-                        variant="outline"
                       >
-                        <Trash2 className="w-3 h-3" />
-                        <span className="hidden lg:inline">Delete</span>
+                        <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  );
+                },
+              },
+            ]}
+          />
         </div>
-      </Card>
 
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-3">
-        {courses.map((c) => (
-          <Card key={c.id} className="p-4 space-y-3">
-            <div>
-              <h3 className="font-semibold text-sm truncate">{c.title}</h3>
-              <p className="text-xs text-neutral-600 mt-1">
-                {c.instructor.name}
-              </p>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <div>
-                <span className="text-neutral-600">{c.students} students</span>
-                <span className="mx-2">•</span>
-                <span className="text-neutral-600">
-                  {(c.price * 0.043).toFixed(2)} USD
-                </span>
+        {/* Server-side pager (updates URL query params) */}
+        <div className="mt-3 flex items-center justify-end gap-4">
+          <div className="text-sm text-neutral-600">
+            Showing {Math.min(totalElements, page * size + courses.length)} of{" "}
+            {totalElements}
+          </div>
+          <div>
+            {RP ? (
+              <RP
+                pageCount={totalPages}
+                forcePage={page}
+                onPageChange={({ selected }) =>
+                  setSearchParams({
+                    page: String(selected),
+                    size: String(size),
+                  })
+                }
+                marginPagesDisplayed={1}
+                pageRangeDisplayed={3}
+                previousLabel={"Prev"}
+                nextLabel={"Next"}
+                containerClassName={"inline-flex items-center space-x-1"}
+                pageLinkClassName={
+                  "px-3 py-1 rounded hover:bg-neutral-100 cursor-pointer text-sm"
+                }
+                activeLinkClassName={"bg-indigo-600 text-white"}
+              />
+            ) : (
+              <div className="inline-flex items-center gap-2 text-sm text-neutral-600">
+                <button
+                  onClick={() =>
+                    setSearchParams({
+                      page: String(Math.max(0, page - 1)),
+                      size: String(size),
+                    })
+                  }
+                  className="px-3 py-1 rounded hover:bg-neutral-100"
+                  disabled={page <= 0}
+                >
+                  Prev
+                </button>
+                <div>
+                  {page + 1} / {totalPages}
+                </div>
+                <button
+                  onClick={() =>
+                    setSearchParams({
+                      page: String(Math.min(totalPages - 1, page + 1)),
+                      size: String(size),
+                    })
+                  }
+                  className="px-3 py-1 rounded hover:bg-neutral-100"
+                  disabled={page >= totalPages - 1}
+                >
+                  Next
+                </button>
               </div>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button
-                size="sm"
-                className="flex-1 text-xs flex items-center justify-center gap-1"
-                onClick={() => navigate(`/admin/courses/${c.id}/view`)}
-              >
-                View
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1 text-xs flex items-center justify-center gap-1"
-                onClick={() => navigate(`/admin/courses/${c.id}`)}
-              >
-                <Edit2 className="w-3 h-3" />
-                Edit
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1 text-xs flex items-center justify-center gap-1"
-                onClick={() => {
-                  setCourseToDelete(c);
-                  setConfirmOpen(true);
-                }}
-                variant="outline"
-              >
-                <Trash2 className="w-3 h-3" />
-                Delete
-              </Button>
-            </div>
-          </Card>
-        ))}
+            )}
+          </div>
+
+          <select
+            className="ml-2 border rounded px-2 py-1 text-sm"
+            value={String(size)}
+            onChange={(e) =>
+              setSearchParams({
+                page: "0",
+                size: String(Number(e.target.value)),
+              })
+            }
+          >
+            {[5, 10, 20, 50].map((s) => (
+              <option key={s} value={s}>
+                {s} / page
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {confirmOpen && courseToDelete && (

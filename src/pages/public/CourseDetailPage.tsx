@@ -7,7 +7,7 @@ import reviewService from "@/services/reviewService";
 import type { Review, Course, Section } from "@/types";
 import { Curriculum } from "@/components/course/CourseDetail";
 import cartService from "@/services/cartService";
-import RelatedCourses from "@/components/course/RelatedCourses";
+
 import Reviews from "@/components/course/Reviews";
 
 export default function CourseDetailPage() {
@@ -19,19 +19,26 @@ export default function CourseDetailPage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [relatedCourses, setRelatedCourses] = useState<Course[]>([]);
-  const [instructorCourses, setInstructorCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addedToCart, setAddedToCart] = useState(false);
+
+  // Add to cart helper (optionally navigate to cart after adding)
+  const handleAddToCart = (navigateAfter = false) => {
+    if (!course) return;
+    cartService.addToCart(course);
+    if (navigateAfter) navigate("/cart");
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 1800);
+  };
 
   const fetchData = useCallback(async () => {
     if (!id) return;
 
     try {
       setLoading(true);
-      const [courseData, reviewsData, allCourses] = await Promise.all([
+      const [courseData, reviewsData] = await Promise.all([
         courseService.getCourseById(id),
         reviewService.getByCourseId(id),
-        courseService.getCourses(),
       ]);
 
       setCourse(courseData);
@@ -50,25 +57,6 @@ export default function CourseDetailPage() {
         } else {
           setSections(courseData.sections);
         }
-
-        // Get related courses
-        const related = allCourses
-          .filter(
-            (c) =>
-              c.category.id === courseData.category.id && c.id !== courseData.id
-          )
-          .slice(0, 4);
-        setRelatedCourses(related);
-
-        // Get instructor's other courses
-        const instructorOther = allCourses
-          .filter(
-            (c) =>
-              c.instructor.id === courseData.instructor.id &&
-              c.id !== courseData.id
-          )
-          .slice(0, 3);
-        setInstructorCourses(instructorOther);
       }
     } catch (error) {
       console.error("Failed to fetch course details:", error);
@@ -129,23 +117,35 @@ export default function CourseDetailPage() {
                 <div className="text-2xl font-bold">
                   {(course.price * 23000).toLocaleString("vi-VN")} ₫
                 </div>
-                <button
-                  className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-                  onClick={() => {
-                    cartService.addToCart(course);
-                    navigate("/cart");
-                  }}
-                >
-                  {t("cta.enroll")}
-                </button>
-                <button
-                  onClick={() => {
-                    navigate("learn");
-                  }}
-                  className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-                >
-                  Learning
-                </button>
+                <div className="mt-4 space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      className="flex-1 px-4 py-2 border border-neutral-300 rounded font-medium hover:bg-neutral-50"
+                      onClick={() => handleAddToCart(false)}
+                    >
+                      {t("cta.addToCart")}
+                    </button>
+                    <button
+                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded font-medium hover:bg-indigo-700"
+                      onClick={() => handleAddToCart(true)}
+                    >
+                      {t("cta.buyNow")}
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigate("learn");
+                    }}
+                    className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
+                  >
+                    Learning
+                  </button>
+                  {addedToCart && (
+                    <div className="mt-2 text-sm text-green-600">
+                      {t("cart.added")}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <div className="md:col-span-4 col-span-1 hidden md:block">
@@ -153,6 +153,7 @@ export default function CourseDetailPage() {
                 <div className="absolute p-4 md:border-2 bg-white rounded-lg z-20">
                   <div>
                     <img
+                      onClick={() => navigate("learn")}
                       src={course.thumbnail}
                       alt={course.title}
                       className="w-full rounded-lg aspect-video object-cover"
@@ -167,27 +168,29 @@ export default function CourseDetailPage() {
                         </div>
                         <div>{course.students.toLocaleString()} students</div>
                       </div>
-                      <div className="mt-4">
+                      <div className="mt-4 space-y-3">
                         <div className="text-2xl font-bold">
                           {(course.price * 23000).toLocaleString("vi-VN")} ₫
                         </div>
-                        <button
-                          className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-                          onClick={() => {
-                            cartService.addToCart(course);
-                            navigate("/cart");
-                          }}
-                        >
-                          {t("cta.enroll")}
-                        </button>
-                        <button
-                          onClick={() => {
-                            navigate("learn");
-                          }}
-                          className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-                        >
-                          Learning
-                        </button>
+                        <div className="gap-2 grid">
+                          <button
+                            className="px-4 py-2 border border-neutral-300 rounded font-medium hover:bg-neutral-50"
+                            onClick={() => handleAddToCart(false)}
+                          >
+                            {t("cta.addToCart")}
+                          </button>
+                          <button
+                            className="px-4 py-2 bg-indigo-600 text-white rounded font-medium hover:bg-indigo-700"
+                            onClick={() => handleAddToCart(true)}
+                          >
+                            {t("cta.buyNow")}
+                          </button>
+                        </div>
+                        {addedToCart && (
+                          <div className="mt-2 text-sm text-green-600">
+                            {t("cart.added")}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

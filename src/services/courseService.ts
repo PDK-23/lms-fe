@@ -362,6 +362,24 @@ export async function getLessons(sectionId: string): Promise<Lesson[]> {
   return data.map(toLesson);
 }
 
+// Lesson detail returned from backend
+interface LessonDetailDTO {
+  id: number;
+  title: string;
+  description?: string;
+  additionalInfo?: string;
+  comments?: any[]; // ReviewDTO list
+}
+
+export async function getLessonDetails(
+  lessonId: string
+): Promise<LessonDetailDTO> {
+  const data = await get<LessonDetailDTO>(
+    `/courses/lessons/${lessonId}/details`
+  );
+  return data;
+}
+
 export async function addLesson(
   courseId: string,
   sectionId: string,
@@ -440,4 +458,5 @@ export default {
   updateLesson,
   deleteLesson,
   reorderLessons,
+  getLessonDetails,
 };

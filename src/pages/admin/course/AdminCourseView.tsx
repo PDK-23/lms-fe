@@ -37,9 +37,21 @@ export default function AdminCourseView() {
     try {
       setLoading(true);
       const c = await courseService.getCourseById(id);
-      setCourseData(c);
+      console.log("Fetched course:", c);
+
+      // Normalize sections/lessons to avoid runtime errors when backend returns null
+      const normalized = {
+        ...c,
+        sections: (c?.sections || []).map((s) => ({
+          ...s,
+          lessons: s?.lessons || [],
+        })),
+      } as Course | null;
+
+      setCourseData(normalized);
     } catch (error) {
       console.error("Failed to fetch course:", error);
+      setCourseData(null);
     } finally {
       setLoading(false);
     }
@@ -79,7 +91,10 @@ export default function AdminCourseView() {
       const [removed] = moved.splice(source.index, 1);
       moved.splice(destination.index, 0, removed);
       try {
-        await courseService.reorderSections(courseData.id, moved.map(s => s.id));
+        await courseService.reorderSections(
+          courseData.id,
+          moved.map((s) => s.id)
+        );
         fetchCourse();
       } catch (error) {
         console.error("Failed to reorder sections:", error);
@@ -101,7 +116,11 @@ export default function AdminCourseView() {
           const moved = Array.from(fromSection.lessons);
           const [removed] = moved.splice(source.index, 1);
           moved.splice(destination.index, 0, removed);
-          await courseService.reorderLessons(courseData.id, fromSectionId, moved.map(l => l.id));
+          await courseService.reorderLessons(
+            courseData.id,
+            fromSectionId,
+            moved.map((l) => l.id)
+          );
           fetchCourse();
           return;
         }
@@ -111,8 +130,16 @@ export default function AdminCourseView() {
         const [removed] = fromLessons.splice(source.index, 1);
         const toLessons = Array.from(toSection.lessons);
         toLessons.splice(destination.index, 0, removed);
-        await courseService.reorderLessons(courseData.id, fromSectionId, fromLessons.map(l => l.id));
-        await courseService.reorderLessons(courseData.id, toSectionId, toLessons.map(l => l.id));
+        await courseService.reorderLessons(
+          courseData.id,
+          fromSectionId,
+          fromLessons.map((l) => l.id)
+        );
+        await courseService.reorderLessons(
+          courseData.id,
+          toSectionId,
+          toLessons.map((l) => l.id)
+        );
         fetchCourse();
       } catch (error) {
         console.error("Failed to reorder lessons:", error);
@@ -159,7 +186,7 @@ export default function AdminCourseView() {
         </div>
       </div>
 
-      <Card className="p-6 space-y-6">
+      <div className="space-y-6">
         <div className="md:flex md:gap-6">
           <div className="w-full md:w-1/3">
             <img
@@ -222,7 +249,7 @@ export default function AdminCourseView() {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       <Card className="shadow-none hover:shadow-none">
         <div className="flex items-center justify-between">
@@ -444,7 +471,11 @@ export default function AdminCourseView() {
                   };
                   try {
                     if (courseData.sections?.some((s) => s.id === sec.id)) {
-                      await courseService.updateSection(courseData.id, sec.id, sec);
+                      await courseService.updateSection(
+                        courseData.id,
+                        sec.id,
+                        sec
+                      );
                     } else {
                       await courseService.addSection(courseData.id, sec);
                     }

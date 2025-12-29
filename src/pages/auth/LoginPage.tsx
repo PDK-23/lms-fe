@@ -37,9 +37,10 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      await login(data);
-      navigate("/");
-      reset();
+      await login(data, (user) => {
+        navigate("/");
+        reset();
+      });
     } catch (err) {
       if (err instanceof Error) {
         // Extract error message from API response

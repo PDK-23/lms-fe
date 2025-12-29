@@ -36,8 +36,19 @@ api.interceptors.response.use(
 
       // Handle 401 Unauthorized - try to refresh token or redirect to login
       if (status === 401) {
-        const refreshToken = localStorage.getItem("refresh_token");
         const originalRequest = error.config;
+        const requestUrl = originalRequest?.url || "";
+
+        // If the failing request is login or register, let the caller handle the 401
+        // (so the login form can show validation errors instead of the app redirecting)
+        if (
+          requestUrl.includes("/auth/login") ||
+          requestUrl.includes("/auth/register")
+        ) {
+          return Promise.reject(error);
+        }
+
+        const refreshToken = localStorage.getItem("refresh_token");
 
         // If we have a refresh token and this isn't already a retry
         if (
@@ -129,7 +140,9 @@ export async function get<T>(
 
 export async function post<T>(url: string, data?: unknown): Promise<T> {
   const response = await api.post<ApiResponse<T>>(url, data);
-  return response.data.data;
+  console.log("POST response data:", response.data);
+  //@ts-ignore
+  return response?.data?.data || response?.data;
 }
 
 export async function put<T>(url: string, data?: unknown): Promise<T> {

@@ -49,6 +49,7 @@ export default function AdminCourseDetail() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
 
   const fetchData = useCallback(async () => {
@@ -63,7 +64,11 @@ export default function AdminCourseDetail() {
       setCategories(cats);
       setSpecializations(specs);
       if (course) {
-        setFormData(course);
+        // Normalize level to uppercase to match backend enum values (BEGINNER, INTERMEDIATE, ADVANCED)
+        setFormData({
+          ...course,
+          level: (course.level || "BEGINNER").toString().toUpperCase(),
+        });
       }
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -84,14 +89,18 @@ export default function AdminCourseDetail() {
     const { name, value, type } = e.target as HTMLInputElement;
     const checked = (e.target as HTMLInputElement).checked;
 
+    const newValue =
+      name === "level"
+        ? String(value).toUpperCase()
+        : type === "checkbox"
+        ? checked
+        : type === "number"
+        ? parseFloat(value)
+        : value;
+
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : type === "number"
-          ? parseFloat(value)
-          : value,
+      [name]: newValue,
     }));
   };
 
@@ -135,17 +144,36 @@ export default function AdminCourseDetail() {
     const selectedCategory = categories.find(
       (c) => c.id === formData.category.id
     );
+
+    const payload: Partial<Course> = {
+      ...formData,
+      level: (formData.level || "BEGINNER").toString().toUpperCase(),
+    };
+
     if (selectedCategory) {
-      formData.categoryId = selectedCategory.id;
-      formData.category = selectedCategory;
+      payload.categoryId = selectedCategory.id;
+      payload.category = selectedCategory;
     }
 
     try {
-      await courseService.updateCourse(formData.id, formData);
+      // Validate category - backend requires a non-null category_id
+      if (!payload.categoryId) {
+        setErrorMessage("Please select a category before saving.");
+        setIsSaving(false);
+        return;
+      }
+
+      // Ensure we don't send explicit null for category/categoryId
+      if (payload.categoryId == null) delete (payload as any).categoryId;
+      if ((payload as any).category == null) delete (payload as any).category;
+
+      await courseService.updateCourse(formData.id, payload);
       setSuccessMessage("Course updated successfully!");
+      setErrorMessage(null);
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Failed to update course:", error);
+      setErrorMessage("Failed to update course. See console for details.");
     } finally {
       setIsSaving(false);
     }
@@ -191,15 +219,20 @@ export default function AdminCourseDetail() {
         </div>
       </div>
 
-      {/* Success Message */}
+      {/* Success or Error Message */}
       {successMessage && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
           {successMessage}
         </div>
       )}
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+          {errorMessage}
+        </div>
+      )}
 
       {/* Form */}
-      <Card className="p-6 space-y-6">
+      <div className="space-y-6">
         {/* Basic Information */}
         <div className="border-b pb-6">
           <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
@@ -293,9 +326,9 @@ export default function AdminCourseDetail() {
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
+                <option value="BEGINNER">Beginner</option>
+                <option value="INTERMEDIATE">Intermediate</option>
+                <option value="ADVANCED">Advanced</option>
               </select>
             </div>
 
@@ -509,7 +542,7 @@ export default function AdminCourseDetail() {
             </label>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Action Buttons */}
       <div className="flex gap-3 justify-end pt-4">

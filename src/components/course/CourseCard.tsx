@@ -38,7 +38,7 @@ export function CourseCard({
         <div className="relative">
           <div className="w-full aspect-video bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
             <img
-              src={course.category.icon}
+              src={course.thumbnail}
               alt={course.category.name}
               className="w-full aspect-video object-cover rounded"
             />
@@ -108,7 +108,7 @@ export function CourseCard({
       <div className="relative">
         <div className="w-full aspect-video bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
           <img
-            src={course.category.icon}
+            src={course.thumbnail}
             alt={course.category.name}
             className="w-full aspect-video object-cover rounded"
           />

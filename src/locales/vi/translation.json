@@ -8,7 +8,9 @@
     "instructors": "Giảng viên"
   },
   "cta": {
-    "enroll": "Đăng ký ngay"
+    "enroll": "Đăng ký ngay",
+    "buyNow": "Mua ngay",
+    "addToCart": "Thêm vào giỏ hàng"
   },
   "status": {
     "loading": "Đang tải...",

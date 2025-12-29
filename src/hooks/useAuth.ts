@@ -7,7 +7,10 @@ interface UseAuthReturn {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (
+    credentials: LoginCredentials,
+    onSuccess?: (user: User) => void
+  ) => Promise<void>;
   signup: (credentials: SignUpCredentials) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => void;
@@ -52,22 +55,36 @@ export function useAuth(): UseAuthReturn {
     }
   }, [initialized]);
 
-  const login = useCallback(async (credentials: LoginCredentials) => {
-    setIsLoading(true);
-    setError(null);
+  const login = useCallback(
+    async (credentials: LoginCredentials, onSuccess?: (user: User) => void) => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const response = await authService.login(credentials);
-      setUser(authUserToUser(response.user));
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Login failed. Please try again.";
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      try {
+        const response = await authService.login(credentials);
+        console.log("Attempting login for", response);
+        const user = authUserToUser(response.user);
+        setUser(user);
+        // Emit login event for global listeners
+        try {
+          window.dispatchEvent(new CustomEvent("auth:login", { detail: user }));
+        } catch (e) {
+          // ignore if window not available
+        }
+        if (onSuccess) onSuccess(user);
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Login failed. Please try again.";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   const signup = useCallback(async (credentials: SignUpCredentials) => {
     setIsLoading(true);
@@ -79,7 +96,11 @@ export function useAuth(): UseAuthReturn {
         email: credentials.email,
         password: credentials.password,
       });
-      setUser(authUserToUser(response.user));
+      const user = authUserToUser(response.user);
+      setUser(user);
+      try {
+        window.dispatchEvent(new CustomEvent("auth:signup", { detail: user }));
+      } catch (e) {}
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Signup failed. Please try again.";
@@ -93,6 +114,9 @@ export function useAuth(): UseAuthReturn {
   const logout = useCallback(() => {
     authService.logout();
     setUser(null);
+    try {
+      window.dispatchEvent(new CustomEvent("auth:logout"));
+    } catch (e) {}
   }, []);
 
   const updateProfile = useCallback((data: Partial<User>) => {
