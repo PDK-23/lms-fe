@@ -78,10 +78,11 @@ export default function AdminCourses() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h2 className="text-lg sm:text-xl font-semibold">Courses</h2>
         <Button
+          size="sm"
           className="w-full sm:w-auto"
           onClick={() => navigate("/admin/courses/new")}
         >
-          New Course
+          + New Course
         </Button>
       </div>
 

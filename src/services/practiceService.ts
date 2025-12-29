@@ -24,11 +24,43 @@ function toPractice(dto: PracticeDTO): Practice {
   let tests: { input: string; output: string }[] | undefined;
 
   try {
+    // Backend may return templates as JSON string (legacy) or as an array of DTOs
     if (dto.templates) {
-      templates = JSON.parse(dto.templates);
+      if (typeof dto.templates === "string") {
+        templates = JSON.parse(dto.templates);
+      } else if (Array.isArray(dto.templates)) {
+        templates = (dto.templates as any[]).reduce((acc, t) => {
+          if (t && t.language) acc[t.language] = t.template || "";
+          return acc;
+        }, {} as { [lang: string]: string });
+      }
     }
+
+    // testCases can be a JSON string or an array of DTOs
     if (dto.testCases) {
-      tests = JSON.parse(dto.testCases);
+      if (typeof dto.testCases === "string") {
+        // parsed may be an array of objects
+        const parsed = JSON.parse(dto.testCases);
+        if (Array.isArray(parsed)) {
+          tests = parsed
+            .slice()
+            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+            .map((tc) => ({
+              input: tc.input,
+              output: tc.output,
+              isHidden: !!tc.isHidden,
+            }));
+        }
+      } else if (Array.isArray(dto.testCases)) {
+        tests = (dto.testCases as any[])
+          .slice()
+          .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+          .map((tc) => ({
+            input: tc.input,
+            output: tc.output,
+            isHidden: !!tc.isHidden,
+          }));
+      }
     }
   } catch {
     // Ignore parse errors
@@ -41,7 +73,13 @@ function toPractice(dto: PracticeDTO): Practice {
     description: dto.description,
     difficulty: dto.difficulty?.toLowerCase() as "easy" | "medium" | "hard",
     defaultLanguage: dto.defaultLanguage,
-    tags: dto?.tags ? dto?.tags?.split(",").map((t) => t.trim()) : undefined,
+    tags: dto?.tags
+      ? Array.isArray(dto.tags)
+        ? dto.tags.map((t) => String(t).trim())
+        : String(dto.tags)
+            .split(",")
+            .map((t) => t.trim())
+      : undefined,
     externalUrl: dto.externalUrl,
     templates,
     tests,
@@ -70,6 +108,7 @@ export async function getPractices(): Promise<Practice[]> {
     page: 0,
     size: 1000,
   });
+  console.log("Fetched practices:", response);
   return response.content.map(toPractice);
 }
 

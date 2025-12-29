@@ -104,7 +104,7 @@ export interface Practice {
   tags?: string[];
   externalUrl?: string;
   templates?: { [lang: string]: string };
-  tests?: { input: string; output: string }[];
+  tests?: { input: string; output: string; isHidden?: boolean }[];
 }
 
 export interface Tag {

@@ -8,12 +8,14 @@ import courseService from "@/services/courseService";
 
 interface LessonCenterProps {
   lesson?: Lesson | undefined;
+  courseId?: string;
 }
 
-export default function LessonCenter({ lesson }: LessonCenterProps) {
+export default function LessonCenter({ lesson, courseId }: LessonCenterProps) {
   const [loading, setLoading] = useState(true);
   const [lessonData, setLessonData] = useState<any | null>(null);
   const navigate = useNavigate();
+  console.log("LessonCenter lesson:", lesson);
 
   useEffect(() => {
     let mounted = true;
@@ -94,17 +96,75 @@ export default function LessonCenter({ lesson }: LessonCenterProps) {
         </button>
       </div>
 
-      <VideoPlayer
-        videoUrl={lesson?.videoUrl}
-        title={lesson?.title || "Select a lesson"}
-        duration={lesson?.duration || 0}
-        onMarkComplete={() => {
-          // noop - parent may handle state changes
-        }}
-      />
+      {/* Render Video player for video lessons, otherwise show start action */}
+      {(lesson?.type === "video" || !lesson?.type) && (
+        <VideoPlayer
+          videoUrl={lesson?.videoUrl}
+          title={lesson?.title || "Select a lesson"}
+          duration={lesson?.duration || 0}
+          onMarkComplete={() => {
+            // noop - parent may handle state changes
+          }}
+        />
+      )}
 
+      {(lesson?.type === "quiz" || lesson?.quizAvailable) && (
+        <div className="p-6 bg-white h-[50vh] !mt-0">
+          <div className="flex flex-col items-start gap-4">
+            <h3 className="text-lg font-semibold">Quiz: {lesson.title}</h3>
+            <p className="text-neutral-700">
+              This lesson contains a quiz. Click Start to begin.
+            </p>
+            <div>
+              <button
+                onClick={() =>
+                  navigate(
+                    `/courses/${courseId}/learn/lesson/${lesson.id}/quiz`
+                  )
+                }
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Start Quiz
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(lesson?.type === "practice" || lesson?.practiceId) && (
+        <Card className="p-6">
+          <div className="flex flex-col items-start gap-4">
+            <h3 className="text-lg font-semibold">Practice: {lesson.title}</h3>
+            <p className="text-neutral-700">
+              This lesson contains a coding practice. Click Start to begin.
+            </p>
+            <div>
+              <button
+                onClick={() =>
+                  navigate(
+                    `/courses/${courseId}/learn/lesson/${lesson.slug}/practice/${lesson.practiceId}`
+                  )
+                }
+                className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800"
+              >
+                Start Practice
+              </button>
+            </div>
+          </div>
+        </Card>
+      )}
       {/* Lesson Tabs - Description & Comments */}
-      <Card className="overflow-hidden rounded-none !mt-0" key={lesson.id}>
+
+      <Card
+        className={`overflow-hidden rounded-none !mt-0 ${
+          (lesson?.type === "practice" ||
+            lesson?.practiceId ||
+            lesson?.type === "quiz" ||
+            lesson?.quizAvailable) &&
+          "hidden"
+        }`}
+        key={lesson.id}
+      >
         <div className="p-6">
           <div className="space-y-6">
             <div>

@@ -13,19 +13,19 @@ import {
 interface VideoPlayerProps {
   videoUrl?: string;
   title: string;
-  duration: number;
+  duration?: number;
   onMarkComplete?: () => void;
 }
 
 export function VideoPlayer({
   videoUrl,
   title,
-  duration,
   onMarkComplete,
 }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [showControls, setShowControls] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -38,6 +38,12 @@ export function VideoPlayer({
       videoRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate]);
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
+    }
+  };
 
   const changePlaybackRate = (rate: number) => {
     setPlaybackRate(rate);
@@ -111,6 +117,7 @@ export function VideoPlayer({
           ref={videoRef}
           className="w-full h-full"
           onTimeUpdate={(e) => setCurrentTime(e.currentTime)}
+          onLoadedMetadata={handleLoadedMetadata}
           onEnded={() => setIsPlaying(false)}
         >
           {videoUrl && <source src={videoUrl} type="video/mp4" />}
@@ -135,25 +142,29 @@ export function VideoPlayer({
         >
           {/* Progress Bar */}
           <div className="absolute bottom-16 left-0 right-0 px-4">
-            <input
-              type="range"
-              min="0"
-              max={duration * 60}
-              value={currentTime}
-              onChange={handleTimeChange}
-              className="w-full h-1 bg-neutral-600 rounded-full cursor-pointer appearance-none"
-              style={{
-                background: `linear-gradient(to right, #4f46e5 0%, #4f46e5 ${
-                  (currentTime / (duration * 60)) * 100
-                }%, #4b5563 ${
-                  (currentTime / (duration * 60)) * 100
-                }%, #4b5563 100%)`,
-              }}
-            />
-            <div className="flex justify-between text-xs text-white mt-2">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration * 60)}</span>
-            </div>
+            {(() => {
+              const percentage =
+                duration > 0 ? (currentTime / duration) * 100 : 0;
+              return (
+                <>
+                  <input
+                    type="range"
+                    min="0"
+                    max={duration}
+                    value={currentTime}
+                    onChange={handleTimeChange}
+                    className="w-full h-1 bg-neutral-600 rounded-full cursor-pointer appearance-none"
+                    style={{
+                      background: `linear-gradient(to right, #4f46e5 0%, #4f46e5 ${percentage}%, #4b5563 ${percentage}%, #4b5563 100%)`,
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-white mt-2">
+                    <span>{formatTime(currentTime)}</span>
+                    <span>{formatTime(duration)}</span>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           {/* Bottom Controls */}

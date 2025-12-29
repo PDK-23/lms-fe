@@ -24,14 +24,18 @@ export default function CodeEditor({ practice }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>("description");
   const [activeBottomTab, setActiveBottomTab] =
     useState<BottomTabType>("testcase");
+
+  // Only show non-hidden testcases in UI and when running
+  const visibleTests = (practice.tests || []).filter((t) => !t.isHidden);
   const [leftPanelWidth, setLeftPanelWidth] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(200); // in pixels
   const [isDraggingVertical, setIsDraggingVertical] = useState(false);
-  const languages = useMemo(
-    () => Object.keys(practice.templates || {}),
-    [practice]
-  );
+  const languages = ["javascript"];
+  // const languages = useMemo(
+  //   () => Object.keys(practice.templates || {}),
+  //   [practice]
+  // );
 
   function getMonacoLanguage(lang: string): string {
     const languageMap: Record<string, string> = {
@@ -46,6 +50,7 @@ export default function CodeEditor({ practice }: Props) {
       typescript: "typescript",
     };
     return languageMap[lang] || "javascript";
+    // return "javascript";
   }
 
   function getFirstFunctionName(js: string): string | null {
@@ -92,8 +97,10 @@ export default function CodeEditor({ practice }: Props) {
 
       const testResults: typeof results = [];
 
-      for (let i = 0; i < (practice.tests || []).length; i++) {
-        const t = practice.tests[i];
+      // Only run visible (non-hidden) test cases
+      const visible = (practice.tests || []).filter((t) => !t.isHidden);
+      for (let i = 0; i < visible.length; i++) {
+        const t = visible[i];
         let args: any[] = [];
         // Try to parse inputs as JSON array by wrapping with []
         try {
@@ -209,7 +216,7 @@ export default function CodeEditor({ practice }: Props) {
 
   return (
     <div
-      className="flex gap-0 h-[95vh] bg-neutral-900 relative"
+      className="flex gap-0 h-[95vh] bg-neutral-900 relative code-editor-container"
       onMouseMove={(e) => {
         handleMouseMove(e);
         handleVerticalMouseMove(e);
@@ -294,7 +301,7 @@ export default function CodeEditor({ practice }: Props) {
                 <div className="text-sm font-semibold text-neutral-300 mb-3">
                   Example Test Cases:
                 </div>
-                {(practice.tests || []).slice(0, 2).map((t, i) => (
+                {visibleTests.slice(0, 2).map((t, i) => (
                   <div key={i} className="mb-4 p-3 bg-neutral-800 rounded">
                     <div className="text-sm font-mono text-neutral-300">
                       <strong>Input:</strong> {t.input}
@@ -439,27 +446,39 @@ export default function CodeEditor({ practice }: Props) {
           <div className="p-4 flex-1 overflow-y-auto bg-neutral-900">
             {activeBottomTab === "testcase" && (
               <div>
-                {(practice.tests || []).map((t, i) => (
-                  <div key={i} className="mb-3">
-                    <div className="text-xs font-semibold text-neutral-400 mb-1">
-                      Case {i + 1}
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-sm">
-                        <span className="text-neutral-400">Input = </span>
-                        <code className="bg-neutral-800 px-2 py-1 rounded font-mono text-sm text-neutral-200">
-                          {t.input}
-                        </code>
+                {/* Scrollable container for test cases */}
+                <div
+                  className="overflow-y-auto pr-2"
+                  style={{ maxHeight: Math.max(bottomPanelHeight - 80, 120) }}
+                >
+                  {visibleTests.map((t, i) => (
+                    <div key={i} className="mb-3">
+                      <div className="text-xs font-semibold text-neutral-400 mb-1">
+                        Case {i + 1}
                       </div>
-                      <div className="text-sm">
-                        <span className="text-neutral-400">Expected = </span>
-                        <code className="bg-neutral-800 px-2 py-1 rounded font-mono text-sm text-neutral-200">
-                          {t.output}
-                        </code>
+                      <div className="space-y-1">
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Input = </span>
+                          <code className="bg-neutral-800 px-2 py-1 rounded font-mono text-sm text-neutral-200">
+                            {t.input}
+                          </code>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Expected = </span>
+                          <code className="bg-neutral-800 px-2 py-1 rounded font-mono text-sm text-neutral-200">
+                            {t.output}
+                          </code>
+                        </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+
+                {visibleTests.length === 0 && (
+                  <div className="text-neutral-400">
+                    No visible test cases available.
                   </div>
-                ))}
+                )}
               </div>
             )}
 
@@ -473,7 +492,10 @@ export default function CodeEditor({ practice }: Props) {
                     Run your code to see results here.
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div
+                    className="space-y-3 overflow-y-auto pr-2"
+                    style={{ maxHeight: Math.max(bottomPanelHeight - 80, 120) }}
+                  >
                     {results.map((r) => (
                       <div
                         key={r.idx}
@@ -504,7 +526,7 @@ export default function CodeEditor({ practice }: Props) {
                           <div>
                             <span className="text-neutral-400">Input: </span>
                             <code className="bg-neutral-800 px-2 py-1 rounded text-neutral-200">
-                              {practice.tests[r.idx].input}
+                              {visibleTests[r.idx]?.input}
                             </code>
                           </div>
                           <div>

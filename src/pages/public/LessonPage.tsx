@@ -133,6 +133,7 @@ export default function LessonPage() {
           <LessonCenter
             key={currentLesson?.id ?? lessonId ?? "none"}
             lesson={currentLesson}
+            courseId={course.id}
           />
 
           {/* Right Sidebar - Course Info & Instructor */}

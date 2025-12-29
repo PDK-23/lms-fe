@@ -1,4 +1,5 @@
 import { Card, Button, Input } from "@/components/ui";
+import { Form, Select, Modal, message } from "antd";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Edit2, Trash2, Plus, Eye } from "lucide-react";
@@ -14,30 +15,23 @@ export default function AdminCourseView() {
   const navigate = useNavigate();
 
   const [courseData, setCourseData] = useState<Course | null>(null);
+  const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [practices, setPractices] = useState<Practice[]>([]);
-  const [sectionEditorOpen, setSectionEditorOpen] = useState(false);
-  const [editingSection, setEditingSection] = useState<Section | null>(null);
-  const [confirmDeleteSection, setConfirmDeleteSection] =
-    useState<Section | null>(null);
 
-  const [lessonEditorOpen, setLessonEditorOpen] = useState(false);
-  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
-  const [lessonParentSection, setLessonParentSection] = useState<string | null>(
-    null
-  );
-  const [confirmDeleteLesson, setConfirmDeleteLesson] = useState<{
-    sectionId: string;
-    lessonId: string;
-  } | null>(null);
+  // Reusable forms at component scope to avoid calling hooks inside callbacks
+  const [sectionForm] = Form.useForm();
+  const [lessonForm] = Form.useForm();
 
   const fetchCourse = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
-      const c = await courseService.getCourseById(id);
-      console.log("Fetched course:", c);
+      const [c, sectionsData] = await Promise.all([
+        courseService.getCourseById(id),
+        courseService.getSections(id),
+      ]);
 
       // Normalize sections/lessons to avoid runtime errors when backend returns null
       const normalized = {
@@ -49,6 +43,7 @@ export default function AdminCourseView() {
       } as Course | null;
 
       setCourseData(normalized);
+      setSections(sectionsData);
     } catch (error) {
       console.error("Failed to fetch course:", error);
       setCourseData(null);
@@ -63,6 +58,8 @@ export default function AdminCourseView() {
         quizService.getQuizzes(),
         practiceService.getPractices(),
       ]);
+
+      console.log("Fetched quizzes:", practicesData);
       setQuizzes(quizzesData);
       setPractices(practicesData);
     } catch (error) {
@@ -74,6 +71,258 @@ export default function AdminCourseView() {
     fetchCourse();
     fetchRelatedData();
   }, [fetchCourse, fetchRelatedData]);
+
+  const showDeleteSectionConfirm = useCallback(
+    (sec: Section) => {
+      Modal.confirm({
+        title: "Confirm Delete",
+        content: `Are you sure you want to delete section "${sec.title}"? This will also remove its lessons.`,
+        okText: "Delete",
+        okType: "danger",
+        cancelText: "Cancel",
+        onOk: async () => {
+          if (!courseData) return;
+          try {
+            await courseService.deleteSection(courseData.id, sec.id);
+            message.success("Section deleted");
+            fetchCourse();
+          } catch (error) {
+            console.error("Failed to delete section:", error);
+          }
+        },
+      });
+    },
+    [courseData, fetchCourse]
+  );
+
+  const showDeleteLessonConfirm = useCallback(
+    (sectionId: string, lessonId: string) => {
+      Modal.confirm({
+        title: "Confirm Delete",
+        content: "Are you sure you want to delete this lesson?",
+        okText: "Delete",
+        okType: "danger",
+        cancelText: "Cancel",
+        onOk: async () => {
+          if (!courseData) return;
+          try {
+            await courseService.deleteLesson(
+              courseData.id,
+              sectionId,
+              lessonId
+            );
+            message.success("Lesson deleted");
+            fetchCourse();
+          } catch (error) {
+            console.error("Failed to delete lesson:", error);
+          }
+        },
+      });
+    },
+    [courseData, fetchCourse]
+  );
+
+  // Section editor implemented as a modal.confirm wrapper with a compact form
+  const showSectionEditor = useCallback(
+    (sec?: Section) => {
+      if (!courseData) return;
+      sectionForm.resetFields();
+      sectionForm.setFieldsValue({ title: sec?.title || "" });
+      Modal.confirm({
+        title: sec ? "Edit Section" : "Add Section",
+        content: (
+          <Form form={sectionForm} layout="vertical">
+            <Form.Item
+              name="title"
+              label="Section Title"
+              rules={[
+                { required: true, message: "Please enter section title" },
+              ]}
+            >
+              <Input placeholder="Enter section title" />
+            </Form.Item>
+          </Form>
+        ),
+        okText: "Save",
+        onOk: async () => {
+          try {
+            const values = await sectionForm.validateFields();
+            const s =
+              sec ||
+              ({
+                id: Date.now().toString(),
+                title: "",
+                lessons: [],
+              } as Section);
+            s.title = values.title;
+            if (sec) {
+              await courseService.updateSection(courseData.id, s.id, s);
+              message.success("Section updated");
+            } else {
+              await courseService.addSection(courseData.id, s);
+              message.success("Section added");
+            }
+            sectionForm.resetFields();
+            fetchCourse();
+          } catch (e) {
+            // validation failed or save failed
+            throw e;
+          }
+        },
+      });
+    },
+    [courseData, fetchCourse]
+  );
+
+  // Lesson editor implemented as modal.confirm with a compact form
+  const showLessonEditor = useCallback(
+    (sectionId: string, lesson?: Lesson) => {
+      if (!courseData) return;
+      // use component-scoped lessonForm to avoid calling hooks inside callbacks
+      lessonForm.resetFields();
+      lessonForm.setFieldsValue({
+        title: lesson?.title || "",
+        type: (lesson?.type as any) || "video",
+        duration: lesson?.duration || 0,
+        videoUrl: lesson?.videoUrl || "",
+        quizId: lesson?.quizId || "",
+        practiceId: lesson?.practiceId || "",
+        practiceLanguage: "javascript",
+      });
+
+      Modal.confirm({
+        width: 600,
+        title: lesson ? "Edit Lesson" : "Add Lesson",
+        content: (
+          <Form form={lessonForm} layout="vertical">
+            <Form.Item
+              name="title"
+              label="Title"
+              rules={[{ required: true, message: "Please enter lesson title" }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item name="type" label="Type" rules={[{ required: true }]}>
+              <Select
+                options={[
+                  { label: "Video", value: "video" },
+                  { label: "Quiz", value: "quiz" },
+                  { label: "Code Practice", value: "practice" },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item
+              name="duration"
+              label="Duration (minutes)"
+              rules={[{ required: true }]}
+            >
+              <Input type="number" />
+            </Form.Item>
+            <Form.Item noStyle dependencies={["type"]}>
+              {({ getFieldValue }) =>
+                getFieldValue("type") === "video" ? (
+                  <Form.Item name="videoUrl" label="Video URL">
+                    <Input />
+                  </Form.Item>
+                ) : null
+              }
+            </Form.Item>
+
+            <Form.Item noStyle dependencies={["type"]}>
+              {({ getFieldValue }) =>
+                getFieldValue("type") === "quiz" ? (
+                  <Form.Item name="quizId" label="Quiz">
+                    <Select
+                      options={[
+                        { label: "-- Create New Quiz --", value: "__new__" },
+                        ...quizzes.map((q) => ({
+                          label: q.title,
+                          value: q.id,
+                        })),
+                      ]}
+                      onChange={(v) => {
+                        if (v === "__new__") {
+                          Modal.destroyAll();
+                          navigate("/admin/quizzes/new");
+                        }
+                      }}
+                    />
+                  </Form.Item>
+                ) : null
+              }
+            </Form.Item>
+
+            <Form.Item noStyle dependencies={["type"]}>
+              {({ getFieldValue }) =>
+                getFieldValue("type") === "practice" ? (
+                  <>
+                    <Form.Item name="practiceId" label="Practice">
+                      <Select
+                        options={[
+                          {
+                            label: "-- Create New Practice --",
+                            value: "__new__",
+                          },
+                          ...practices.map((p) => ({
+                            label: `${p.title} (${p.slug})`,
+                            value: p.id,
+                          })),
+                        ]}
+                        onChange={(v) => {
+                          if (v === "__new__") {
+                            Modal.destroyAll();
+                            navigate("/admin/practices/new");
+                          }
+                        }}
+                      />
+                    </Form.Item>
+                  </>
+                ) : null
+              }
+            </Form.Item>
+          </Form>
+        ),
+        okText: "Save",
+        onOk: async () => {
+          try {
+            const values = await lessonForm.validateFields();
+            const l =
+              lesson ||
+              ({
+                id: Date.now().toString(),
+                title: "",
+                duration: 0,
+                type: "video",
+              } as Lesson);
+            l.title = values.title;
+            l.type = values.type;
+            l.duration = values.duration;
+            l.videoUrl = values.videoUrl || undefined;
+            l.quizId = values.quizId || undefined;
+            l.practiceId = values.practiceId || undefined;
+            l.practiceLanguage = values.practiceLanguage || undefined;
+
+            if (lesson) {
+              await courseService.updateLesson(
+                courseData.id,
+                sectionId,
+                l.id,
+                l
+              );
+              message.success("Lesson updated");
+            } else {
+              await courseService.addLesson(courseData.id, sectionId, l);
+              message.success("Lesson added");
+            }
+            fetchCourse();
+          } catch (e) {
+            throw e;
+          }
+        },
+      });
+    },
+    [courseData, fetchCourse, navigate, quizzes, practices, lessonForm]
+  );
 
   const ensureSections = () => {
     if (!courseData) return [] as Section[];
@@ -95,6 +344,7 @@ export default function AdminCourseView() {
           courseData.id,
           moved.map((s) => s.id)
         );
+        message.success("Sections reordered");
         fetchCourse();
       } catch (error) {
         console.error("Failed to reorder sections:", error);
@@ -121,6 +371,7 @@ export default function AdminCourseView() {
             fromSectionId,
             moved.map((l) => l.id)
           );
+          message.success("Lessons reordered");
           fetchCourse();
           return;
         }
@@ -140,6 +391,7 @@ export default function AdminCourseView() {
           toSectionId,
           toLessons.map((l) => l.id)
         );
+        message.success("Lessons reordered");
         fetchCourse();
       } catch (error) {
         console.error("Failed to reorder lessons:", error);
@@ -251,16 +503,13 @@ export default function AdminCourseView() {
         </div>
       </div>
 
-      <Card className="shadow-none hover:shadow-none">
+      <div className="">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold mb-4">Content</h3>
           <div className="flex gap-2 mb-4">
             <Button
               className="flex gap-2 items-center"
-              onClick={() => {
-                setEditingSection(null);
-                setSectionEditorOpen(true);
-              }}
+              onClick={() => showSectionEditor()}
             >
               <Plus className="w-4 h-4" />
               <span className="ml-2">Add Section</span>
@@ -277,7 +526,7 @@ export default function AdminCourseView() {
                   {...provided.droppableProps}
                   className="space-y-4"
                 >
-                  {(courseData.sections || []).map((sec, sIdx) => (
+                  {(sections || []).map((sec, sIdx) => (
                     <Draggable draggableId={sec.id} index={sIdx} key={sec.id}>
                       {(dr) => (
                         <div
@@ -297,16 +546,13 @@ export default function AdminCourseView() {
                             </div>
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => {
-                                  setEditingSection(sec);
-                                  setSectionEditorOpen(true);
-                                }}
+                                onClick={() => showSectionEditor(sec)}
                                 className="p-1 hover:bg-neutral-100 rounded"
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => setConfirmDeleteSection(sec)}
+                                onClick={() => showDeleteSectionConfirm(sec)}
                                 className="p-1 hover:bg-neutral-100 rounded text-red-600"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -377,11 +623,9 @@ export default function AdminCourseView() {
                                           </Button>
                                           <Button
                                             size="sm"
-                                            onClick={() => {
-                                              setEditingLesson(lesson);
-                                              setLessonParentSection(sec.id);
-                                              setLessonEditorOpen(true);
-                                            }}
+                                            onClick={() =>
+                                              showLessonEditor(sec.id, lesson)
+                                            }
                                           >
                                             Edit
                                           </Button>
@@ -389,10 +633,10 @@ export default function AdminCourseView() {
                                             size="sm"
                                             variant="outline"
                                             onClick={() =>
-                                              setConfirmDeleteLesson({
-                                                sectionId: sec.id,
-                                                lessonId: lesson.id,
-                                              })
+                                              showDeleteLessonConfirm(
+                                                sec.id,
+                                                lesson.id
+                                              )
                                             }
                                           >
                                             Delete
@@ -406,11 +650,7 @@ export default function AdminCourseView() {
 
                                 <div className="px-4 py-3">
                                   <Button
-                                    onClick={() => {
-                                      setEditingLesson(null);
-                                      setLessonParentSection(sec.id);
-                                      setLessonEditorOpen(true);
-                                    }}
+                                    onClick={() => showLessonEditor(sec.id)}
                                   >
                                     Add Lesson
                                   </Button>
@@ -428,410 +668,7 @@ export default function AdminCourseView() {
             </Droppable>
           </DragDropContext>
         </div>
-      </Card>
-
-      {/* Section Editor Modal */}
-      {sectionEditorOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 bg-black opacity-40"
-            onClick={() => setSectionEditorOpen(false)}
-          />
-          <div className="bg-white rounded-lg p-6 z-50 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-2">
-              {editingSection ? "Edit Section" : "Add Section"}
-            </h3>
-            <Input
-              value={editingSection?.title || ""}
-              onChange={(e) =>
-                setEditingSection((s) => ({
-                  ...(s || {
-                    id: Date.now().toString(),
-                    title: "",
-                    lessons: [],
-                  }),
-                  title: e.target.value,
-                }))
-              }
-            />
-            <div className="flex justify-end gap-2 mt-4">
-              <Button
-                variant="outline"
-                onClick={() => setSectionEditorOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (!courseData) return;
-                  const sec = editingSection || {
-                    id: Date.now().toString(),
-                    title: "",
-                    lessons: [],
-                  };
-                  try {
-                    if (courseData.sections?.some((s) => s.id === sec.id)) {
-                      await courseService.updateSection(
-                        courseData.id,
-                        sec.id,
-                        sec
-                      );
-                    } else {
-                      await courseService.addSection(courseData.id, sec);
-                    }
-                    setSectionEditorOpen(false);
-                    fetchCourse();
-                  } catch (error) {
-                    console.error("Failed to save section:", error);
-                  }
-                }}
-              >
-                Save
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Lesson Editor Modal */}
-      {lessonEditorOpen && lessonParentSection && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 bg-black opacity-40"
-            onClick={() => setLessonEditorOpen(false)}
-          />
-          <div className="bg-white rounded-lg p-6 z-50 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-2">
-              {editingLesson ? "Edit Lesson" : "Add Lesson"}
-            </h3>
-            <div className="space-y-2">
-              <div>
-                <label className="block text-sm text-neutral-700 mb-1">
-                  Title
-                </label>
-                <Input
-                  value={editingLesson?.title || ""}
-                  onChange={(e) =>
-                    setEditingLesson((l) => ({
-                      ...(l || {
-                        id: Date.now().toString(),
-                        title: "",
-                        duration: 0,
-                        type: "video",
-                      }),
-                      title: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-neutral-700 mb-1">
-                  Type
-                </label>
-                <select
-                  value={(editingLesson as any)?.type || "video"}
-                  onChange={(e) =>
-                    setEditingLesson((l) => ({
-                      ...(l || {
-                        id: Date.now().toString(),
-                        title: "",
-                        duration: 0,
-                      }),
-                      type: e.target.value as any,
-                    }))
-                  }
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg"
-                >
-                  <option value="video">Video</option>
-                  <option value="quiz">Quiz</option>
-                  <option value="practice">Code Practice</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm text-neutral-700 mb-1">
-                  Duration (min)
-                </label>
-                <Input
-                  type="number"
-                  value={editingLesson?.duration || 0}
-                  onChange={(e) =>
-                    setEditingLesson((l) => ({
-                      ...(l || {
-                        id: Date.now().toString(),
-                        title: "",
-                        duration: 0,
-                      }),
-                      duration: Number(e.target.value),
-                    }))
-                  }
-                />
-              </div>
-
-              {/* Type-specific fields */}
-              {(editingLesson as any)?.type === "video" && (
-                <div>
-                  <label className="block text-sm text-neutral-700 mb-1">
-                    Video URL
-                  </label>
-                  <Input
-                    value={editingLesson?.videoUrl || ""}
-                    onChange={(e) =>
-                      setEditingLesson((l) => ({
-                        ...(l || {
-                          id: Date.now().toString(),
-                          title: "",
-                          duration: 0,
-                        }),
-                        videoUrl: e.target.value,
-                      }))
-                    }
-                    placeholder="https://example.com/video.mp4"
-                  />
-                </div>
-              )}
-
-              {(editingLesson as any)?.type === "quiz" && (
-                <div className="space-y-2">
-                  <label className="block text-sm text-neutral-700 mb-1">
-                    Quiz
-                  </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={(editingLesson as any)?.quizId || ""}
-                      onChange={(e) =>
-                        setEditingLesson((l) => ({
-                          ...(l || {
-                            id: Date.now().toString(),
-                            title: "",
-                            duration: 0,
-                          }),
-                          quizAvailable: true,
-                          quizId: e.target.value,
-                        }))
-                      }
-                      className="flex-1 px-3 py-2 border rounded"
-                    >
-                      <option value="">Select a quiz</option>
-                      {quizzes.map((q) => (
-                        <option key={q.id} value={q.id}>
-                          {q.title}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setLessonEditorOpen(false);
-                        navigate("/admin/quizzes/new");
-                      }}
-                    >
-                      New
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {(editingLesson as any)?.type === "practice" && (
-                <div className="space-y-2">
-                  <label className="block text-sm text-neutral-700 mb-1">
-                    Practice
-                  </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={(editingLesson as any)?.practiceId || ""}
-                      onChange={(e) =>
-                        setEditingLesson((l) => ({
-                          ...(l || {
-                            id: Date.now().toString(),
-                            title: "",
-                            duration: 0,
-                          }),
-                          practiceId: e.target.value,
-                        }))
-                      }
-                      className="flex-1 px-3 py-2 border rounded"
-                    >
-                      <option value="">Select a practice</option>
-                      {practices.map((p) => (
-                        <option key={p.id} value={p.slug}>
-                          {p.title} ({p.slug})
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setLessonEditorOpen(false);
-                        navigate("/admin/practices/new");
-                      }}
-                    >
-                      New
-                    </Button>
-                  </div>
-
-                  <label className="block text-sm text-neutral-700 mb-1">
-                    Practice Language (optional)
-                  </label>
-                  <Input
-                    value={(editingLesson as any)?.practiceLanguage || ""}
-                    onChange={(e) =>
-                      setEditingLesson((l) => ({
-                        ...(l || {
-                          id: Date.now().toString(),
-                          title: "",
-                          duration: 0,
-                        }),
-                        practiceLanguage: e.target.value,
-                      }))
-                    }
-                    placeholder="javascript"
-                  />
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button
-                variant="outline"
-                onClick={() => setLessonEditorOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (!courseData || !lessonParentSection) return;
-                  const l = editingLesson || {
-                    id: Date.now().toString(),
-                    title: "",
-                    duration: 0,
-                    type: "video",
-                  };
-                  // ensure type present
-                  if (!(l as any).type) (l as any).type = "video";
-
-                  try {
-                    if (
-                      courseData.sections
-                        ?.find((s) => s.id === lessonParentSection)
-                        ?.lessons.some((x) => x.id === l.id)
-                    ) {
-                      await courseService.updateLesson(
-                        courseData.id,
-                        lessonParentSection,
-                        l.id,
-                        l
-                      );
-                    } else {
-                      await courseService.addLesson(
-                        courseData.id,
-                        lessonParentSection,
-                        l
-                      );
-                    }
-                    setLessonEditorOpen(false);
-                    fetchCourse();
-                  } catch (error) {
-                    console.error("Failed to save lesson:", error);
-                  }
-                }}
-              >
-                Save
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm Delete Section */}
-      {confirmDeleteSection && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 bg-black opacity-40"
-            onClick={() => setConfirmDeleteSection(null)}
-          />
-          <div className="bg-white rounded-lg p-6 z-50 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-2">Confirm Delete</h3>
-            <p className="text-sm text-neutral-600 mb-4">
-              Are you sure you want to delete section "
-              {confirmDeleteSection.title}"? This will also remove its lessons.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setConfirmDeleteSection(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (courseData) {
-                    try {
-                      await courseService.deleteSection(
-                        courseData.id,
-                        confirmDeleteSection.id
-                      );
-                      setConfirmDeleteSection(null);
-                      fetchCourse();
-                    } catch (error) {
-                      console.error("Failed to delete section:", error);
-                    }
-                  }
-                }}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm Delete Lesson */}
-      {confirmDeleteLesson && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 bg-black opacity-40"
-            onClick={() => setConfirmDeleteLesson(null)}
-          />
-          <div className="bg-white rounded-lg p-6 z-50 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-2">Confirm Delete</h3>
-            <p className="text-sm text-neutral-600 mb-4">
-              Are you sure you want to delete this lesson?
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setConfirmDeleteLesson(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (courseData && confirmDeleteLesson) {
-                    try {
-                      await courseService.deleteLesson(
-                        courseData.id,
-                        confirmDeleteLesson.sectionId,
-                        confirmDeleteLesson.lessonId
-                      );
-                      setConfirmDeleteLesson(null);
-                      fetchCourse();
-                    } catch (error) {
-                      console.error("Failed to delete lesson:", error);
-                    }
-                  }
-                }}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
 
       <div className="flex justify-end">
         <Button

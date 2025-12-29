@@ -17,7 +17,14 @@ export default function CodePracticePage() {
     if (!problemSlug) return;
     try {
       setLoading(true);
-      const data = await practiceService.getPracticeBySlug(problemSlug);
+      // First try by id; if not found, try by slug (some URLs contain slug)
+      let data = await practiceService.getPracticeById(problemSlug);
+      if (!data) {
+        console.log("Not found by id, trying slug...");
+        data = await practiceService.getPracticeBySlug(problemSlug);
+      }
+
+      console.log("Fetched practice:", data);
       setPractice(data);
     } catch (error) {
       console.error("Failed to fetch practice:", error);
@@ -47,7 +54,7 @@ export default function CodePracticePage() {
   }
 
   return (
-    <div className="px-4 bg-neutral-900 h-screen flex flex-col">
+    <div className="px-4 bg-neutral-900 h-screen flex flex-col overflow-hidden">
       <div className="flex items-center justify-between py-4">
         <div>
           <h2 className="font-semibold text-neutral-100">
@@ -56,7 +63,7 @@ export default function CodePracticePage() {
           <div className="text-sm text-neutral-400">Course: {courseId}</div>
         </div>
         <div>
-          <Button variant="outline" onClick={() => navigate(-1)}>
+          <Button size="sm" variant="outline" onClick={() => navigate(-1)}>
             Back
           </Button>
         </div>

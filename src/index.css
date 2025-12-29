@@ -1,7 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import "tailwindcss";
 
 * {
   @apply box-border;
@@ -38,4 +37,18 @@ button {
 
 ::-webkit-scrollbar-thumb {
   @apply bg-neutral-300 rounded hover:bg-neutral-400;
+}
+
+.ant-modal-confirm-body span[role="img"] {
+  display: none;
+}
+
+.code-editor-container::-webkit-scrollbar {
+  @apply w-3 h-3;
+}
+.code-editor-container::-webkit-scrollbar-track {
+  @apply bg-neutral-800;
+}
+.code-editor-container::-webkit-scrollbar-thumb {
+  @apply bg-neutral-700 rounded hover:bg-neutral-600;
 }
