@@ -41,7 +41,7 @@ function toPractice(dto: PracticeDTO): Practice {
     description: dto.description,
     difficulty: dto.difficulty?.toLowerCase() as "easy" | "medium" | "hard",
     defaultLanguage: dto.defaultLanguage,
-    tags: dto.tags ? dto.tags.split(",").map((t) => t.trim()) : undefined,
+    tags: dto?.tags ? dto?.tags?.split(",").map((t) => t.trim()) : undefined,
     externalUrl: dto.externalUrl,
     templates,
     tests,

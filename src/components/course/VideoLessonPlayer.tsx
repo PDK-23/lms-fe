@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
@@ -28,9 +28,24 @@ export function VideoLessonPlayer({
 
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
-  >({
-    [sections[0]?.id]: true,
-  });
+  >({});
+
+  useEffect(() => {
+    // Expand first section by default when sections load
+    if (sections.length && Object.keys(expandedSections).length === 0) {
+      setExpandedSections({ [sections[0].id]: true });
+    }
+  }, [sections]);
+
+  useEffect(() => {
+    if (!currentLesson) return;
+    const containing = sections.find((s) =>
+      s.lessons?.some((l) => l.id === currentLesson.id)
+    );
+    if (containing) {
+      setExpandedSections((prev) => ({ ...prev, [containing.id]: true }));
+    }
+  }, [currentLesson, sections]);
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) => ({

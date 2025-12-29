@@ -8,7 +8,9 @@
     "instructors": "Instructors"
   },
   "cta": {
-    "enroll": "Enroll Now"
+    "enroll": "Enroll Now",
+    "buyNow": "Buy Now",
+    "addToCart": "Add to Cart"
   },
   "status": {
     "loading": "Loading...",

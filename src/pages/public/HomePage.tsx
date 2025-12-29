@@ -5,10 +5,10 @@ import {
   InstructorCard,
   SearchBar,
 } from "@/components/course";
-import { MOCK_INSTRUCTORS } from "@/lib/constants";
 import courseService from "@/services/courseService";
 import categoryService from "@/services/categoryService";
-import { type Course, type Category } from "@/types";
+import userService from "@/services/userService";
+import { type Course, type Category, type Instructor } from "@/types";
 import { ArrowRight } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
@@ -16,19 +16,39 @@ export function HomePage() {
   const [_searchQuery, setSearchQuery] = useState("");
   const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [coursesData, categoriesData] = await Promise.all([
+      const [coursesData, categoriesData, instructorsData] = await Promise.all([
         courseService
           .getFeaturedCourses()
           .catch(() => courseService.getCourses()),
         categoryService.getCategories(),
+        userService
+          .getUsersByRole("INSTRUCTOR", 0, 5)
+          .catch(() => ({ content: [] })),
       ]);
       setFeaturedCourses(coursesData.slice(0, 4));
       setCategories(categoriesData.slice(0, 8));
+      // Map backend User objects to Instructor shape expected by UI
+      const mappedInstructors = (instructorsData.content || []).map((u) => ({
+        id: String(u.id),
+        name: u.name,
+        avatar:
+          u.avatar ||
+          `https://placehold.co/128x128?text=${encodeURIComponent(
+            (u.name || "Instructor").split(" ")[0]
+          )}`,
+        bio: u.bio || "",
+        rating: 0,
+        totalRatings: 0,
+        students: 0,
+        isVerified: !!u.isActive,
+      }));
+      setInstructors(mappedInstructors);
     } catch (error) {
       console.error("Failed to fetch home page data:", error);
     } finally {
@@ -205,9 +225,15 @@ export function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          {MOCK_INSTRUCTORS.slice(0, 5).map((instructor) => (
-            <InstructorCard key={instructor.id} instructor={instructor} />
-          ))}
+          {loading ? (
+            <div className="col-span-full flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            instructors.map((instructor) => (
+              <InstructorCard key={instructor.id} instructor={instructor} />
+            ))
+          )}
         </div>
       </section>
 

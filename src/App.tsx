@@ -71,6 +71,11 @@ function App() {
           <Route path="/cart" element={<CartPage />} />
         </Route>
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/courses/:id/learn" element={<LessonPage />} />
+        <Route
+          path="/courses/:id/learn/lesson/:lessonId"
+          element={<LessonPage />}
+        />
         <Route path="/courses/:id/learn/*" element={<LessonPage />} />
         <Route
           path="/courses/:id/learn/lesson/:lessonId/quiz"

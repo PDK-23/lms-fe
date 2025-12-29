@@ -38,8 +38,8 @@ const storage = {
 export async function login(
   credentials: LoginCredentials
 ): Promise<AuthResponse> {
-  const response = await post<AuthResponse>("/v1/auth/login", credentials);
-
+  const response = await post<AuthResponse>("/auth/login", credentials);
+  console.log("Login response:", response);
   // Store tokens and user
   storage.setTokens(response.accessToken, response.refreshToken);
   storage.setUser(response.user);
@@ -50,7 +50,7 @@ export async function login(
 export async function register(
   credentials: Omit<SignUpCredentials, "confirmPassword">
 ): Promise<AuthResponse> {
-  const response = await post<AuthResponse>("/v1/auth/register", {
+  const response = await post<AuthResponse>("/auth/register", {
     name: credentials.name,
     email: credentials.email,
     password: credentials.password,
@@ -71,7 +71,7 @@ export async function refreshToken(): Promise<AuthResponse> {
   }
 
   const request: RefreshTokenRequest = { refreshToken: currentRefreshToken };
-  const response = await post<AuthResponse>("/v1/auth/refresh", request);
+  const response = await post<AuthResponse>("/auth/refresh", request);
 
   // Update tokens and user
   storage.setTokens(response.accessToken, response.refreshToken);
@@ -81,7 +81,7 @@ export async function refreshToken(): Promise<AuthResponse> {
 }
 
 export async function getCurrentUser(): Promise<AuthResponse> {
-  const response = await get<AuthResponse>("/v1/auth/me");
+  const response = await get<AuthResponse>("/auth/me");
 
   // Update stored user
   if (response.user) {
@@ -94,12 +94,12 @@ export async function getCurrentUser(): Promise<AuthResponse> {
 export async function changePassword(
   request: ChangePasswordRequest
 ): Promise<void> {
-  await post<void>("/v1/auth/change-password", request);
+  await post<void>("/auth/change-password", request);
 }
 
 export function logout(): void {
   // Call backend logout (optional, since JWT is stateless)
-  post("/v1/auth/logout", {}).catch(() => {
+  post("/auth/logout", {}).catch(() => {
     // Ignore errors on logout
   });
 
