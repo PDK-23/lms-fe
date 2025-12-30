@@ -60,12 +60,48 @@ export default function LessonPage() {
         try {
           const fetchedSections = await courseService.getSections(courseId);
           setSections(fetchedSections || []);
+
+          // fetch completed lesson ids and mark lessons
+          try {
+            const completed = await courseService.getCompletedLessons(courseId);
+            if (completed && completed.length) {
+              setSections((prev) =>
+                (prev || []).map((s) => ({
+                  ...s,
+                  lessons: (s.lessons || []).map((l) => ({
+                    ...l,
+                    isCompleted: completed.includes(l.id),
+                  })),
+                }))
+              );
+            }
+          } catch (err) {
+            // ignore when unauthenticated or error
+          }
         } catch (err) {
           console.error("Failed to fetch sections:", err);
           setSections([]);
         }
       } else {
         setSections(courseData.sections);
+
+        // fetch completed lesson ids and mark lessons
+        try {
+          const completed = await courseService.getCompletedLessons(courseId);
+          if (completed && completed.length) {
+            setSections((prev) =>
+              (prev || []).map((s) => ({
+                ...s,
+                lessons: (s.lessons || []).map((l) => ({
+                  ...l,
+                  isCompleted: completed.includes(l.id),
+                })),
+              }))
+            );
+          }
+        } catch (err) {
+          // ignore errors (e.g., unauthenticated)
+        }
       }
     } catch (error) {
       console.error("Failed to fetch course:", error);
@@ -134,6 +170,17 @@ export default function LessonPage() {
             key={currentLesson?.id ?? lessonId ?? "none"}
             lesson={currentLesson}
             courseId={course.id}
+            onLessonCompleted={(lessonId) => {
+              setSections((prev) =>
+                (prev || []).map((s) => ({
+                  ...s,
+                  lessons: (s.lessons || []).map((l) => ({
+                    ...l,
+                    isCompleted: l.id === lessonId ? true : l.isCompleted,
+                  })),
+                }))
+              );
+            }}
           />
 
           {/* Right Sidebar - Course Info & Instructor */}

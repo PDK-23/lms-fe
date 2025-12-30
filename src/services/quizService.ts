@@ -115,6 +115,49 @@ export async function deleteQuiz(id: string): Promise<void> {
   await del(`/quizzes/${id}`);
 }
 
+export async function submitAttempt(payload: {
+  lessonId: string;
+  attemptId?: string;
+  timeTaken: number;
+  answers: Array<{
+    questionId: string;
+    selectedIndex?: number;
+    selectedOptionId?: string;
+    textAnswer?: string;
+  }>;
+}) {
+  const data = await post(`/quizzes/submit`, payload);
+  return data;
+}
+
+export async function startAttempt(lessonId: string) {
+  const data = await post(`/quizzes/start?lessonId=${lessonId}`, {});
+  return data;
+}
+
+export async function getActiveAttempt(lessonId: string) {
+  const data = await get(`/quizzes/attempt?lessonId=${lessonId}`);
+  return data as any;
+}
+
+export async function saveAttemptProgress(payload: {
+  attemptId: string;
+  lessonId: string;
+  timeTaken?: number;
+  answers: Array<{
+    questionId: string;
+    selectedIndex?: number;
+    selectedOptionId?: string;
+    textAnswer?: string;
+  }>;
+}) {
+  const data = await post(
+    `/quizzes/attempt/${payload.attemptId}/progress`,
+    payload
+  );
+  return data;
+}
+
 export default {
   getQuizzes,
   getQuizzesPaginated,
@@ -124,4 +167,8 @@ export default {
   addQuiz,
   updateQuiz,
   deleteQuiz,
+  submitAttempt,
+  startAttempt,
+  getActiveAttempt,
+  saveAttemptProgress,
 };

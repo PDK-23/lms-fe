@@ -78,7 +78,11 @@ export function VideoLessonPlayer({
             <div
               className="bg-green-500 h-full transition-all duration-300"
               style={{
-                width: `${(getCompletedLessons() / getTotalLessons()) * 100}%`,
+                width: `${
+                  getTotalLessons() === 0
+                    ? 0
+                    : (getCompletedLessons() / getTotalLessons()) * 100
+                }%`,
               }}
             />
           </div>

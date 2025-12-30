@@ -9,9 +9,14 @@ import courseService from "@/services/courseService";
 interface LessonCenterProps {
   lesson?: Lesson | undefined;
   courseId?: string;
+  onLessonCompleted?: (lessonId: string) => void;
 }
 
-export default function LessonCenter({ lesson, courseId }: LessonCenterProps) {
+export default function LessonCenter({
+  lesson,
+  courseId,
+  onLessonCompleted,
+}: LessonCenterProps) {
   const [loading, setLoading] = useState(true);
   const [lessonData, setLessonData] = useState<any | null>(null);
   const navigate = useNavigate();
@@ -102,8 +107,24 @@ export default function LessonCenter({ lesson, courseId }: LessonCenterProps) {
           videoUrl={lesson?.videoUrl}
           title={lesson?.title || "Select a lesson"}
           duration={lesson?.duration || 0}
-          onMarkComplete={() => {
-            // noop - parent may handle state changes
+          onMarkComplete={async (watchTime?: number) => {
+            try {
+              await (courseService as any).markVideoProgress(lesson.id, {
+                isCompleted: true,
+                watchTime: Math.floor(watchTime || lesson?.duration || 0),
+              });
+
+              // notify parent to update UI
+              if (onLessonCompleted && lesson?.id) {
+                try {
+                  onLessonCompleted(lesson.id);
+                } catch (err) {
+                  // ignore
+                }
+              }
+            } catch (e) {
+              console.error("Failed to mark video progress:", e);
+            }
           }}
         />
       )}
@@ -117,11 +138,16 @@ export default function LessonCenter({ lesson, courseId }: LessonCenterProps) {
             </p>
             <div>
               <button
-                onClick={() =>
-                  navigate(
-                    `/courses/${courseId}/learn/lesson/${lesson.id}/quiz`
-                  )
-                }
+                onClick={async () => {
+                  try {
+                    const resp: any = await (await import("@/services/quizService")).startAttempt(lesson.id);
+                    // navigate to quiz page (quiz page will load the active attempt)
+                    navigate(`/courses/${courseId}/learn/lesson/${lesson.id}/quiz`);
+                  } catch (err) {
+                    console.error("Failed to start quiz:", err);
+                    alert(err?.message || "Failed to start quiz");
+                  }
+                }}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
               >
                 Start Quiz
@@ -142,7 +168,7 @@ export default function LessonCenter({ lesson, courseId }: LessonCenterProps) {
               <button
                 onClick={() =>
                   navigate(
-                    `/courses/${courseId}/learn/lesson/${lesson.slug}/practice/${lesson.practiceId}`
+                    `/courses/${courseId}/learn/lesson/${lesson.id}/practice/${lesson.practiceId}`
                   )
                 }
                 className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800"

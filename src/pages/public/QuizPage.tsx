@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui";
 import { ArrowLeft, Clock, Flag } from "lucide-react";
 import MOCK_QUIZ_QUESTIONS, { getQuizMeta } from "@/mocks/quizQuestions";
+import quizService from "@/services/quizService";
+import courseService from "@/services/courseService";
 
 export default function QuizPage() {
   const { id: courseId, lessonId } = useParams();
@@ -19,11 +21,32 @@ export default function QuizPage() {
 
   const selectAnswer = (qId: string, idx: number) => {
     setAnswers((prev) => ({ ...prev, [qId]: idx }));
+
+    // autosave to backend when attempt exists
+    if (attemptId) {
+      const answersPayload = Object.entries({ ...answers, [qId]: idx }).map(
+        ([questionId, selectedIndex]) => ({ questionId, selectedIndex })
+      );
+      const timeTaken = (QUIZ_DURATION_MINUTES * 60) - secondsLeft;
+      // fire-and-forget
+      (async () => {
+        try {
+          await quizService.saveAttemptProgress({
+            attemptId: attemptId,
+            lessonId: lessonId || "",
+            timeTaken,
+            answers: answersPayload,
+          });
+        } catch (e) {
+          // ignore autosave errors
+        }
+      })();
+    }
   };
 
   // Flags (questions to review)
   const [flags, setFlags] = useState<Record<string, boolean>>({});
-  const [reviewOnly, setReviewOnly] = useState(false);
+  const [reviewOnly] = useState(false);
 
   // Load/save flags to localStorage per course+lesson
   const flagsStorageKey = `quizFlags:${courseId || "default"}:${
@@ -50,16 +73,6 @@ export default function QuizPage() {
     setFlags((prev) => ({ ...prev, [qId]: !prev[qId] }));
   };
 
-  const jumpToFirstFlagged = () => {
-    const idx = questions.findIndex((q) => flags[q.id]);
-    if (idx >= 0) {
-      questionRefs.current[idx]?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }
-  };
-
   // Quiz timer (seconds)
   const QUIZ_DURATION_MINUTES = 30;
   const [secondsLeft, setSecondsLeft] = useState(QUIZ_DURATION_MINUTES * 60);
@@ -67,12 +80,73 @@ export default function QuizPage() {
   // Refs to question elements for quick navigation
   const questionRefs = useRef<Array<HTMLDivElement | null>>([]);
 
+  // initialize from active attempt if exists
   useEffect(() => {
+    let mounted = true;
+    async function loadAttempt() {
+      if (!lessonId) return;
+      try {
+        const resp: any = await quizService.getActiveAttempt(lessonId);
+        if (!mounted || !resp) return;
+        const attempt = resp; // may be null
+        if (attempt && attempt.id) {
+          setAttemptId(attempt.id);
+
+          // prefill answers
+          if (attempt.answers && attempt.answers.length) {
+            const map: Record<string, number> = {};
+            for (const a of attempt.answers) {
+              // if backend returns selectedOptionId, try to find index
+              const q = questions.find((qq) => qq.id === a.questionId);
+              if (!q) continue;
+              if (a.selectedOptionId) {
+                // try to match by option text or id fallback - for mock we try not available
+                // no-op here
+              }
+              // if backend didn't include index, leave undefined; but if selectedOptionId absent and we had stored selectedIndex in answers during save, backend should return it - otherwise skip
+              if ((a as any).selectedIndex !== undefined) {
+                map[a.questionId] = (a as any).selectedIndex;
+              }
+            }
+            setAnswers(map);
+          }
+
+          // compute secondsLeft from startedAt
+          if (attempt.startedAt) {
+            const started = new Date(attempt.startedAt).getTime();
+            const elapsed = Math.floor((Date.now() - started) / 1000);
+            const totalSeconds = (quizMeta.duration || QUIZ_DURATION_MINUTES) * 60;
+            setSecondsLeft(Math.max(0, totalSeconds - elapsed));
+          }
+
+          // if attempt already completed, mark submitted
+          if (attempt.status && attempt.status !== "PENDING") {
+            setIsSubmitted(true);
+            setResult({
+              id: attempt.id,
+              score: attempt.score ?? 0,
+              earnedPoints: attempt.earnedPoints ?? 0,
+              totalPoints: attempt.totalPoints ?? 0,
+              timeTaken: attempt.timeTaken ?? 0,
+              passed: attempt.status === "PASSED",
+            });
+          }
+        }
+      } catch (err) {
+        // ignore if unauthenticated or no attempt
+      }
+    }
+
+    loadAttempt();
+
     const interval = setInterval(() => {
       setSecondsLeft((s) => Math.max(0, s - 1));
     }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [lessonId]);
 
   useEffect(() => {
     if (secondsLeft === 0 && !hasAutoSubmitted.current) {
@@ -83,13 +157,82 @@ export default function QuizPage() {
     }
   }, [secondsLeft]);
 
-  const handleSubmit = () => {
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [result, setResult] = useState<null | {
+    id: string;
+    score: number;
+    earnedPoints: number;
+    totalPoints: number;
+    timeTaken: number;
+    passed: boolean;
+  }>(null);
+
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+
+  const PASSING_SCORE = 70; // fallback when quiz metadata doesn't include passingScore
+
+  const handleSubmit = async () => {
     if (secondsLeft === 0) {
       alert("Cannot submit — time is up. Auto-submitted (mock).");
       return;
     }
 
-    alert("Submitted (mock)");
+    // compute time taken
+    const durationSeconds = QUIZ_DURATION_MINUTES * 60;
+    const timeTaken = durationSeconds - secondsLeft;
+
+    // build answers array and compute score locally (mock)
+    const answersPayload = questions.map((q) => ({
+      questionId: q.id,
+      selectedIndex: answers[q.id],
+    }));
+
+    let earned = 0;
+    let total = questions.length; // each question 1 point in mock
+    for (const q of questions) {
+      const sel = answers[q.id];
+      if (sel !== undefined && sel === q.correct) earned++;
+    }
+    const percent = total === 0 ? 0 : (earned / total) * 100;
+    const passed = percent >= PASSING_SCORE;
+
+    try {
+      // call backend to save attempt and grading
+      const payload = {
+        lessonId: lessonId || "",
+        timeTaken,
+        answers: answersPayload,
+      };
+        // include attemptId if we have one so backend finalizes the existing attempt
+      if (attemptId) (payload as any).attemptId = attemptId;
+      const response: any = await (quizService as any).submitAttempt(payload);
+
+      setIsSubmitted(true);
+      setResult({
+        id: response.id || response.attemptId || attemptId || "",
+        score: response.score ?? percent,
+        earnedPoints: response.earnedPoints ?? earned,
+        totalPoints: response.totalPoints ?? total,
+        timeTaken: response.timeTaken ?? timeTaken,
+        passed: response.status === "PASSED" || passed,
+      });
+
+      // mark attempt id if returned
+      if (response?.id) setAttemptId(response.id);
+
+      // when passed, notify parent UI (e.g., Lesson page) via history or event
+      try {
+        if (response?.status === "PASSED" && lessonId) {
+          // call lesson progress endpoint via courseService to refresh progress later - optional
+          await (courseService as any).getCompletedLessons(lessonId);
+        }
+      } catch (e) {
+        // ignore
+      }
+    } catch (err) {
+      console.error("Failed to submit quiz:", err);
+      alert("Failed to submit quiz. Please try again.");
+    }
   };
 
   return (
@@ -177,15 +320,24 @@ export default function QuizPage() {
                             {q.choices.map((c, idx) => (
                               <label
                                 key={idx}
-                                onClick={() => selectAnswer(q.id, idx)}
-                                className="flex items-center gap-2 py-2 cursor-pointer rounded-lg hover:bg-neutral-50 px-2"
+                                onClick={() =>
+                                  !isSubmitted && selectAnswer(q.id, idx)
+                                }
+                                className={`flex items-center gap-2 py-2 cursor-pointer rounded-lg hover:bg-neutral-50 px-2 ${
+                                  isSubmitted
+                                    ? "opacity-70 cursor-not-allowed"
+                                    : ""
+                                }`}
                               >
                                 <input
                                   type="radio"
                                   name={q.id}
                                   checked={answers[q.id] === idx}
-                                  onChange={() => selectAnswer(q.id, idx)}
+                                  onChange={() =>
+                                    !isSubmitted && selectAnswer(q.id, idx)
+                                  }
                                   className="sr-only"
+                                  disabled={isSubmitted}
                                 />
 
                                 <div
@@ -245,11 +397,45 @@ export default function QuizPage() {
                   ))}
                 </div>
 
+                {/* Grading info after submit */}
+                {isSubmitted && result && (
+                  <div className="mt-4 p-3 bg-neutral-50 rounded border text-sm text-neutral-700">
+                    <div className="flex items-center justify-between mb-1">
+                      <div>Score</div>
+                      <div className="font-semibold">
+                        {Math.round(result.score)}%
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div>Points</div>
+                      <div className="font-semibold">
+                        {result.earnedPoints}/{result.totalPoints}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>Time taken</div>
+                      <div className="font-semibold">
+                        {Math.floor(result.timeTaken / 60)}m{" "}
+                        {result.timeTaken % 60}s
+                      </div>
+                    </div>
+                    <div
+                      className={`mt-3 inline-block px-3 py-1 rounded-full text-xs ${
+                        result.passed
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {result.passed ? "Passed" : "Failed"}
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-6 flex gap-2 justify-end">
                   <Button
                     size="sm"
                     onClick={handleSubmit}
-                    disabled={secondsLeft === 0}
+                    disabled={secondsLeft === 0 || isSubmitted}
                   >
                     Submit
                   </Button>

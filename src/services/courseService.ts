@@ -389,6 +389,40 @@ export async function getLessonDetails(
   return data;
 }
 
+export async function markVideoProgress(
+  lessonId: string,
+  payload: { isCompleted?: boolean; watchTime?: number }
+): Promise<void> {
+  await post(`/progress/video`, {
+    lessonId,
+    isCompleted: payload.isCompleted,
+    watchTime: payload.watchTime,
+  });
+}
+
+export async function markQuizComplete(payload: {
+  lessonId: string;
+  attemptId: string;
+  passed: boolean;
+  score?: number;
+}): Promise<void> {
+  await post(`/progress/quiz`, payload);
+}
+
+export async function markPracticeComplete(payload: {
+  lessonId: string;
+  submissionId: string;
+  passed: boolean;
+  testsPassed?: number;
+}): Promise<void> {
+  await post(`/progress/practice`, payload);
+}
+
+export async function getCompletedLessons(courseId: string): Promise<string[]> {
+  const data = await get<string[]>(`/progress/course/${courseId}`);
+  return data || [];
+}
+
 export async function addLesson(
   courseId: string,
   sectionId: string,
@@ -476,4 +510,8 @@ export default {
   deleteLesson,
   reorderLessons,
   getLessonDetails,
+  markVideoProgress,
+  markQuizComplete,
+  markPracticeComplete,
+  getCompletedLessons,
 };

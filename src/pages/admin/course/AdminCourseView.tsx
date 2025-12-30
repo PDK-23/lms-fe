@@ -1,5 +1,12 @@
-import { Card, Button, Input } from "@/components/ui";
-import { Form, Select, Modal, message } from "antd";
+import { Input } from "@/components/ui";
+import {
+  Form,
+  Select,
+  Modal,
+  message,
+  Button as AntButton,
+  Tooltip,
+} from "antd";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Edit2, Trash2, Plus, Eye } from "lucide-react";
@@ -410,13 +417,15 @@ export default function AdminCourseView() {
   if (!courseData) {
     return (
       <div className="space-y-4">
-        <button
-          onClick={() => navigate("/admin/courses")}
-          className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
+        <Tooltip title="Back to courses">
+          <AntButton
+            type="text"
+            icon={<ArrowLeft className="w-4 h-4" />}
+            onClick={() => navigate("/admin/courses")}
+            aria-label="Back to courses"
+            size="small"
+          />
+        </Tooltip>
         <div className="text-center py-8">
           <p className="text-neutral-600">Course not found</p>
         </div>
@@ -428,12 +437,15 @@ export default function AdminCourseView() {
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate("/admin/courses")}
-            className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <Tooltip title="Back to courses">
+            <AntButton
+              type="text"
+              icon={<ArrowLeft className="w-5 h-5" />}
+              onClick={() => navigate("/admin/courses")}
+              aria-label="Back to courses"
+              size="small"
+            />
+          </Tooltip>
           <h2 className="text-2xl font-semibold">{courseData.title}</h2>
         </div>
       </div>
@@ -507,13 +519,16 @@ export default function AdminCourseView() {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold mb-4">Content</h3>
           <div className="flex gap-2 mb-4">
-            <Button
-              className="flex gap-2 items-center"
-              onClick={() => showSectionEditor()}
-            >
-              <Plus className="w-4 h-4" />
-              <span className="ml-2">Add Section</span>
-            </Button>
+            <Tooltip title="Add Section">
+              <AntButton
+                className="flex items-center"
+                onClick={() => showSectionEditor()}
+                icon={<Plus className="w-4 h-4" />}
+                shape="circle"
+                aria-label="Add Section"
+                size="small"
+              />
+            </Tooltip>
           </div>
         </div>
 
@@ -545,18 +560,25 @@ export default function AdminCourseView() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => showSectionEditor(sec)}
-                                className="p-1 hover:bg-neutral-100 rounded"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => showDeleteSectionConfirm(sec)}
-                                className="p-1 hover:bg-neutral-100 rounded text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              <Tooltip title="Edit Section">
+                                <AntButton
+                                  type="text"
+                                  icon={<Edit2 className="w-4 h-4" />}
+                                  onClick={() => showSectionEditor(sec)}
+                                  aria-label={`Edit section ${sec.title}`}
+                                  size="small"
+                                />
+                              </Tooltip>
+                              <Tooltip title="Delete Section">
+                                <AntButton
+                                  type="text"
+                                  danger
+                                  icon={<Trash2 className="w-4 h-4" />}
+                                  onClick={() => showDeleteSectionConfirm(sec)}
+                                  aria-label={`Delete section ${sec.title}`}
+                                  size="small"
+                                />
+                              </Tooltip>
                             </div>
                           </div>
 
@@ -611,36 +633,48 @@ export default function AdminCourseView() {
                                           </div>
                                         </div>
                                         <div className="flex gap-4 items-center">
-                                          <Button size="sm">
+                                          <Tooltip title="View Lesson">
                                             <Link
                                               to={`/courses/${courseData.id}/learn/lesson/${lesson.id}`}
-                                              className="text-sm text-white hover:underline"
                                               aria-label={`View ${lesson.title}`}
                                               title="View Lesson"
                                             >
-                                              <Eye className="w-4 h-4" />
+                                              <AntButton
+                                                icon={
+                                                  <Eye className="w-4 h-4" />
+                                                }
+                                                shape="circle"
+                                                size="small"
+                                              />
                                             </Link>
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            onClick={() =>
-                                              showLessonEditor(sec.id, lesson)
-                                            }
-                                          >
-                                            Edit
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() =>
-                                              showDeleteLessonConfirm(
-                                                sec.id,
-                                                lesson.id
-                                              )
-                                            }
-                                          >
-                                            Delete
-                                          </Button>
+                                          </Tooltip>
+                                          <Tooltip title="Edit Lesson">
+                                            <AntButton
+                                              icon={
+                                                <Edit2 className="w-4 h-4" />
+                                              }
+                                              onClick={() =>
+                                                showLessonEditor(sec.id, lesson)
+                                              }
+                                              size="small"
+                                            />
+                                          </Tooltip>
+                                          <Tooltip title="Delete Lesson">
+                                            <AntButton
+                                              type="text"
+                                              danger
+                                              icon={
+                                                <Trash2 className="w-4 h-4" />
+                                              }
+                                              onClick={() =>
+                                                showDeleteLessonConfirm(
+                                                  sec.id,
+                                                  lesson.id
+                                                )
+                                              }
+                                              size="small"
+                                            />
+                                          </Tooltip>
                                         </div>
                                       </div>
                                     )}
@@ -649,11 +683,15 @@ export default function AdminCourseView() {
                                 {providedLessons.placeholder}
 
                                 <div className="px-4 py-3">
-                                  <Button
-                                    onClick={() => showLessonEditor(sec.id)}
-                                  >
-                                    Add Lesson
-                                  </Button>
+                                  <Tooltip title="Add Lesson">
+                                    <AntButton
+                                      icon={<Plus className="w-4 h-4" />}
+                                      onClick={() => showLessonEditor(sec.id)}
+                                      shape="circle"
+                                      size="small"
+                                      aria-label="Add Lesson"
+                                    />
+                                  </Tooltip>
                                 </div>
                               </div>
                             )}
@@ -671,12 +709,15 @@ export default function AdminCourseView() {
       </div>
 
       <div className="flex justify-end">
-        <Button
-          variant="outline"
-          onClick={() => navigate(`/admin/courses/${courseData.id}`)}
-        >
-          Edit Course
-        </Button>
+        <Tooltip title="Edit Course">
+          <AntButton
+            type="text"
+            icon={<Edit2 className="w-4 h-4" />}
+            onClick={() => navigate(`/admin/courses/${courseData.id}`)}
+            aria-label="Edit Course"
+            size="small"
+          />
+        </Tooltip>
       </div>
     </div>
   );

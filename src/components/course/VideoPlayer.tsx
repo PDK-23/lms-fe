@@ -14,7 +14,7 @@ interface VideoPlayerProps {
   videoUrl?: string;
   title: string;
   duration?: number;
-  onMarkComplete?: () => void;
+  onMarkComplete?: (watchTime?: number) => void;
 }
 
 export function VideoPlayer({
@@ -118,7 +118,10 @@ export function VideoPlayer({
           className="w-full h-full"
           onTimeUpdate={(e) => setCurrentTime(e.currentTime)}
           onLoadedMetadata={handleLoadedMetadata}
-          onEnded={() => setIsPlaying(false)}
+          onEnded={() => {
+            setIsPlaying(false);
+            if (onMarkComplete) onMarkComplete(Math.floor(duration));
+          }}
         >
           {videoUrl && <source src={videoUrl} type="video/mp4" />}
           Your browser does not support the video tag.

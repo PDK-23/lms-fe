@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, Button } from "@/components/ui";
 import { useNavigate } from "react-router-dom";
 import courseService from "@/services/courseService";
+import dashboardService from "@/services/dashboardService";
 import type { Course } from "@/types";
+import type { Dashboard } from "@/types/dashboard";
 import {
   Users,
   BookOpen,
@@ -12,10 +14,38 @@ import {
   Download,
 } from "lucide-react";
 
+// Charts
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Title,
+} from "chart.js";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Title
+);
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
 
   const fetchCourses = useCallback(async () => {
     try {
@@ -31,36 +61,54 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchCourses();
+
+    // fetch dashboard data (charts) - fall back to existing mock data if API fails
+    const fetchDashboard = async () => {
+      try {
+        const data = await dashboardService.getDashboard();
+        setDashboard(data);
+      } catch (err) {
+        console.warn("Failed to fetch dashboard data, using client mock", err);
+      }
+    };
+    fetchDashboard();
   }, [fetchCourses]);
+
+  const getStat = (id: string, fallback: string | number) =>
+    dashboard?.stats?.find((s) => s.id === id)?.value ?? fallback;
 
   const stats = [
     {
       id: "courses",
       label: "Courses",
-      value: courses.length,
+      value: getStat("courses", courses.length),
       icon: BookOpen,
-      delta: "+3 this week",
+      delta:
+        dashboard?.stats?.find((s) => s.id === "courses")?.delta ??
+        "+3 this week",
     },
     {
       id: "students",
       label: "Students",
-      value: 45230,
+      value: getStat("students", 45230),
       icon: Users,
-      delta: "+1.2%",
+      delta:
+        dashboard?.stats?.find((s) => s.id === "students")?.delta ?? "+1.2%",
     },
     {
       id: "revenue",
       label: "Revenue (USD)",
-      value: "$72,400",
+      value: getStat("revenue", "$72,400"),
       icon: DollarSign,
-      delta: "+8%",
+      delta: dashboard?.stats?.find((s) => s.id === "revenue")?.delta ?? "+8%",
     },
     {
       id: "engagement",
       label: "Engagement",
-      value: "72%",
+      value: getStat("engagement", "72%"),
       icon: BarChart3,
-      delta: "+4%",
+      delta:
+        dashboard?.stats?.find((s) => s.id === "engagement")?.delta ?? "+4%",
     },
   ];
 
@@ -85,6 +133,126 @@ export default function AdminDashboard() {
       date: "2 days ago",
     },
   ];
+
+  // If the backend returns recent courses, normalize them to a consistent shape for the table
+  const displayRecentCourses =
+    dashboard?.recentCourses ??
+    recentCourses.map((c) => ({
+      id: c.id,
+      title: c.title,
+      instructor: c.instructor.name,
+      students: c.students,
+      price: c.price,
+    }));
+
+  const displayRecentEnrollments =
+    dashboard?.recentEnrollments ?? recentEnrollments;
+
+  // --- Mock chart data (replace with real API data when available) ---
+  const lineData = useMemo(() => {
+    const labels = dashboard?.weeklyLabels ?? [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun",
+    ];
+    const data = dashboard?.weeklyActive ?? [
+      3420, 3600, 4000, 3800, 4300, 4400, 4720,
+    ];
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Active Users",
+          data,
+          borderColor: "#4f46e5",
+          backgroundColor: "rgba(79,70,229,0.15)",
+          tension: 0.4,
+          fill: true,
+        },
+      ],
+    };
+  }, [dashboard]);
+
+  const lineOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        title: { display: false },
+        tooltip: { mode: "index", intersect: false },
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: "#f3f4f6" } },
+      },
+    }),
+    []
+  );
+
+  const barData = useMemo(() => {
+    const labels = dashboard?.categoryLabels ?? [
+      "Design",
+      "Development",
+      "Marketing",
+      "Business",
+    ];
+    const data = dashboard?.categoryEnrollments ?? [120, 210, 90, 150];
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Enrollments",
+          data,
+          backgroundColor: ["#60a5fa", "#34d399", "#fbbf24", "#f97316"],
+        },
+      ],
+    };
+  }, [dashboard]);
+
+  const barOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: "#f3f4f6" } },
+      },
+    }),
+    []
+  );
+
+  const doughnutData = useMemo(() => {
+    const labels = dashboard?.subscriptionLabels ?? [
+      "Free",
+      "Paid",
+      "Subscription",
+    ];
+    const data = dashboard?.subscriptionData ?? [42, 38, 20];
+    return {
+      labels,
+      datasets: [
+        {
+          data,
+          backgroundColor: ["#60a5fa", "#a78bfa", "#34d399"],
+        },
+      ],
+    };
+  }, [dashboard]);
+
+  const doughnutOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+    }),
+    []
+  );
 
   if (loading) {
     return (
@@ -147,25 +315,12 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        <Card className="lg:col-span-2 p-3 md:p-4">
+        <div className="lg:col-span-2 p-3 md:p-4 h-[400px]">
           <h3 className="font-semibold text-sm md:text-base mb-3 md:mb-4">
             Weekly Active Users
           </h3>
-          <div className="w-full h-32 md:h-40">
-            <svg
-              className="w-full h-full"
-              viewBox="0 0 100 40"
-              preserveAspectRatio="none"
-            >
-              <rect x="0" y="10" width="8" height="30" fill="#eef2ff" />
-              <rect x="12" y="4" width="8" height="36" fill="#c7d2fe" />
-              <rect x="24" y="6" width="8" height="34" fill="#c7d2fe" />
-              <rect x="36" y="2" width="8" height="38" fill="#4f46e5" />
-              <rect x="48" y="8" width="8" height="32" fill="#c7d2fe" />
-              <rect x="60" y="12" width="8" height="28" fill="#eef2ff" />
-              <rect x="72" y="6" width="8" height="34" fill="#c7d2fe" />
-              <rect x="84" y="10" width="8" height="30" fill="#c7d2fe" />
-            </svg>
+          <div className="w-full h-[80%]">
+            <Line options={lineOptions} data={lineData} className="h-full" />
           </div>
 
           <div className="mt-4 flex flex-col sm:flex-row sm:flex-wrap gap-2 text-xs sm:text-sm text-neutral-500">
@@ -184,35 +339,22 @@ export default function AdminDashboard() {
               <span className="font-semibold text-neutral-900">21m</span>
             </div>
           </div>
-        </Card>
+        </div>
 
-        <Card className="p-3 md:p-4">
-          <h3 className="font-semibold text-sm md:text-base mb-3">
-            Recent Enrollments
-          </h3>
-          <ul className="space-y-2 md:space-y-3 text-xs md:text-sm">
-            {recentEnrollments.map((r) => (
-              <li key={r.id} className="flex flex-col gap-1">
-                <div className="font-medium truncate">{r.user}</div>
-                <div className="text-xs text-neutral-500 truncate">
-                  {r.course}
-                </div>
-                <div className="text-xs text-neutral-400">{r.date}</div>
-              </li>
-            ))}
-          </ul>
-        </Card>
+        <div className="p-3 md:p-4">
+          <h3 className="font-semibold text-sm md:text-base">Categories</h3>
+          <div className="mt-4 h-[320px]">
+            <Bar options={barOptions} data={barData} />
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <Card className="p-3 md:p-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="p-3 md:p-4 col-span-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h3 className="font-semibold text-sm md:text-base">
               Recent Courses
             </h3>
-            <Button size="sm" onClick={() => navigate("/admin/courses")}>
-              Manage
-            </Button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs md:text-sm">
@@ -225,14 +367,14 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {recentCourses.map((c) => (
+                {displayRecentCourses.map((c) => (
                   <tr key={c.id} className="border-t hover:bg-neutral-50">
-                    <td className="py-2 px-1 truncate">{c.title}</td>
-                    <td className="py-2 px-1 text-neutral-600 hidden sm:table-cell truncate">
-                      {c.instructor.name}
+                    <td className="py-4 px-1 truncate">{c.title}</td>
+                    <td className="py-4 px-1 text-neutral-600 hidden sm:table-cell truncate">
+                      {c.instructor}
                     </td>
-                    <td className="py-2 px-1 text-neutral-600">{c.students}</td>
-                    <td className="py-2 px-1 text-neutral-600 hidden md:table-cell">
+                    <td className="py-4 px-1 text-neutral-600">{c.students}</td>
+                    <td className="py-4 px-1 text-neutral-600 hidden md:table-cell">
                       {(c.price * 0.043).toFixed(2)} USD
                     </td>
                   </tr>
@@ -240,35 +382,19 @@ export default function AdminDashboard() {
               </tbody>
             </table>
           </div>
-        </Card>
+        </div>
 
-        <Card className="p-3 md:p-4">
+        <div className="p-3 md:p-4">
           <h3 className="font-semibold text-sm md:text-base mb-3">
-            Quick Actions
+            User Subscription Types
           </h3>
-          <div className="space-y-2">
-            <Button
-              className="w-full text-sm"
-              onClick={() => navigate("/admin/courses/new")}
-            >
-              Create Course
-            </Button>
-            <Button
-              className="w-full text-sm"
-              onClick={() => navigate("/admin/users")}
-            >
-              Manage Users
-            </Button>
-            <Button
-              className="w-full text-sm"
-              onClick={() => alert("Exported report")}
-            >
-              Export Reports
-            </Button>
+
+          <div className="mb-4 h-[300px]">
+            <Doughnut options={doughnutOptions} data={doughnutData} />
           </div>
-        </Card>
+        </div>
       </div>
-      <div className="pt-4 md:pt-6">
+      <div className="!mt-0">
         <p className="text-xs text-neutral-500">
           Tip: add filters and charts as needed. This dashboard is a starting
           point — tell me which sections you want detailed (e.g., revenue chart,
