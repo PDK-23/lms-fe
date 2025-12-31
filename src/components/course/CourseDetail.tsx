@@ -7,10 +7,10 @@ export function Curriculum({ sections }: { sections: Section[] }) {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   return (
-    <div className="divide-y-2 border-zinc-500">
+    <div className="divide-y-2 border-zinc-200">
       {sections.map((s) => (
-        <div key={s.id} className="border-zinc-300">
-          <div className="bg-zinc-200">
+        <div key={s.id} className="border-zinc-200">
+          <div className="bg-zinc-100">
             <button
               onClick={() =>
                 setOpenSections((p) => ({ ...p, [s.id]: !p[s.id] }))
@@ -50,7 +50,7 @@ export function Curriculum({ sections }: { sections: Section[] }) {
                   {s.lessons.map((l) => (
                     <li
                       key={l.id}
-                      className="flex items-center justify-between px-4 py-2 bg-zinc-50 border-x hover:bg-zinc-100 cursor-pointer transition-all duration-300"
+                      className="flex items-center justify-between px-4 py-2 bg-zinc-50 border-x hover:bg-zinc-200 cursor-pointer transition-all duration-300"
                     >
                       <div className="flex items-center gap-3">
                         {(l.type ?? "video") === "video" && (

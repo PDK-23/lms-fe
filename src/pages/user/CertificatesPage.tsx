@@ -11,8 +11,8 @@ export default function CertificatesPage() {
 
   return (
     <div className="py-12">
-      <div className="max-w-4xl mx-auto px-4">
-        <h1 className="text-2xl font-bold mb-6">{t("certificates.title")}</h1>
+      <div className="mx-auto px-4">
+        <h1 className="text-xl font-bold mb-6">{t("certificates.title")}</h1>
 
         {certificates.length === 0 ? (
           <Card className="p-6">
@@ -22,7 +22,13 @@ export default function CertificatesPage() {
           <div className="space-y-4">
             {certificates.map((cert) => (
               <Card key={cert.id} className="p-6">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <img
+                      src="https://d3njjcbhbojbot.cloudfront.net/api/utilities/v1/imageproxy/https://d2j5ihb19pt1hq.cloudfront.net/certificates/cert-specialization.png?auto=format%2Ccompress&dpr=2&h=72"
+                      alt=""
+                    />
+                  </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <Award className="w-5 h-5 text-indigo-600" />

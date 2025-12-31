@@ -27,7 +27,7 @@ export default function QuizPage() {
       const answersPayload = Object.entries({ ...answers, [qId]: idx }).map(
         ([questionId, selectedIndex]) => ({ questionId, selectedIndex })
       );
-      const timeTaken = (QUIZ_DURATION_MINUTES * 60) - secondsLeft;
+      const timeTaken = QUIZ_DURATION_MINUTES * 60 - secondsLeft;
       // fire-and-forget
       (async () => {
         try {
@@ -115,7 +115,8 @@ export default function QuizPage() {
           if (attempt.startedAt) {
             const started = new Date(attempt.startedAt).getTime();
             const elapsed = Math.floor((Date.now() - started) / 1000);
-            const totalSeconds = (quizMeta.duration || QUIZ_DURATION_MINUTES) * 60;
+            const totalSeconds =
+              (quizMeta.duration || QUIZ_DURATION_MINUTES) * 60;
             setSecondsLeft(Math.max(0, totalSeconds - elapsed));
           }
 
@@ -203,7 +204,7 @@ export default function QuizPage() {
         timeTaken,
         answers: answersPayload,
       };
-        // include attemptId if we have one so backend finalizes the existing attempt
+      // include attemptId if we have one so backend finalizes the existing attempt
       if (attemptId) (payload as any).attemptId = attemptId;
       const response: any = await (quizService as any).submitAttempt(payload);
 
@@ -259,20 +260,22 @@ export default function QuizPage() {
               </div>
             </div>
           </div>
-          <div
-            className={`px-3 py-1 rounded-full text-sm font-medium items-center flex ${
-              secondsLeft <= 60
-                ? "bg-red-100 text-red-600"
-                : "bg-neutral-100 text-neutral-600"
-            }`}
-          >
-            <Clock size={14} className="inline-block mr-2 text-neutral-500" />
-            {secondsLeft === 0
-              ? "Time's up"
-              : `${Math.floor(secondsLeft / 60)}:${String(
-                  secondsLeft % 60
-                ).padStart(2, "0")}`}
-          </div>
+          {!isSubmitted && (
+            <div
+              className={`px-3 py-1 rounded-full text-sm font-medium items-center flex ${
+                secondsLeft <= 60
+                  ? "bg-red-100 text-red-600"
+                  : "bg-neutral-100 text-neutral-600"
+              }`}
+            >
+              <Clock size={14} className="inline-block mr-2 text-neutral-500" />
+              {secondsLeft === 0
+                ? "Time's up"
+                : `${Math.floor(secondsLeft / 60)}:${String(
+                    secondsLeft % 60
+                  ).padStart(2, "0")}`}
+            </div>
+          )}
         </div>
 
         <div className="p-4">
@@ -323,10 +326,10 @@ export default function QuizPage() {
                                 onClick={() =>
                                   !isSubmitted && selectAnswer(q.id, idx)
                                 }
-                                className={`flex items-center gap-2 py-2 cursor-pointer rounded-lg hover:bg-neutral-50 px-2 ${
+                                className={`flex items-center gap-2 py-2 cursor-pointer rounded-lg px-2 ${
                                   isSubmitted
                                     ? "opacity-70 cursor-not-allowed"
-                                    : ""
+                                    : "hover:bg-neutral-50"
                                 }`}
                               >
                                 <input
@@ -432,13 +435,11 @@ export default function QuizPage() {
                 )}
 
                 <div className="mt-6 flex gap-2 justify-end">
-                  <Button
-                    size="sm"
-                    onClick={handleSubmit}
-                    disabled={secondsLeft === 0 || isSubmitted}
-                  >
-                    Submit
-                  </Button>
+                  {!(secondsLeft === 0 || isSubmitted) && (
+                    <Button size="sm" onClick={handleSubmit}>
+                      Submit
+                    </Button>
+                  )}
                 </div>
               </div>
             </aside>

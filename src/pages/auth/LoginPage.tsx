@@ -166,25 +166,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center">
-            <div className="flex-1 h-px bg-neutral-200"></div>
-            <span className="px-3 text-neutral-500 text-sm">
-              {t("auth.login.or")}
-            </span>
-            <div className="flex-1 h-px bg-neutral-200"></div>
-          </div>
-
-          {/* Social Login */}
-          <div className="space-y-3">
-            <button className="w-full px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors font-medium text-neutral-700">
-              {t("auth.login.socialGoogle")}
-            </button>
-            <button className="w-full px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors font-medium text-neutral-700">
-              {t("auth.login.socialFacebook")}
-            </button>
-          </div>
-
           {/* Sign Up Link */}
           <p className="mt-6 text-center text-neutral-600">
             {t("auth.login.noAccount")}{" "}
